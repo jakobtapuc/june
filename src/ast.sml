@@ -7,7 +7,8 @@ structure Ast :> JUNE_AST = struct
 fun toString expr =
   let
     fun indent n =
-      String.implode (List.tabulate (n, fn _ => #" "))
+      List.tabulate (n, fn _ => #" ")
+        |> String.implode
 
     fun toString' depth expr' =
       case expr' of

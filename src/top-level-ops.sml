@@ -1,6 +1,5 @@
 infixr 0 <|
-infix 1 |>
+fun f <| x = f x
 
-fun op<| (f, x) = f x
-
-fun op|> (x, f) = f x
+infix 0 |>
+fun x |> f = f x
