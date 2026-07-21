@@ -31,13 +31,3 @@ val _ =
   end
   handle
     | exn' => print ((ErrorReporter.report fileName exn') ^ "\n")
-    (* | Value.Value (msg, _) =>
-        print (fileName ^ ": Evaluation failed: " ^ msg ^ "\n")
-
-    | Parser.Parser (msg', pos) =>
-        let
-          val line = Int.toString (#line pos)
-          val column = Int.toString (#column pos)
-        in
-          print (fileName ^ ":" ^ line ^ ":" ^ column ^ ": " ^ msg' ^ "\n")
-        end *)
