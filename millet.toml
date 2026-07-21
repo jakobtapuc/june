@@ -1,0 +1,11 @@
+version = 1
+[workspace]
+root = "src/june.mlb"
+
+[language.successor-ml]
+do-dec = true
+opt-bar = true
+or-pat = true
+record-pun = true
+record-update = true
+vector = true

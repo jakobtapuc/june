@@ -1,0 +1,28 @@
+local
+  $(SML_LIB)/basis/basis.mlb
+in
+  ann
+    "allowSuccessorML true"
+  in
+    top-level-ops.sml
+    token.sig
+    token.sml
+    lexer.sig
+    lexer.sml
+    ast.sig
+    ast.sml
+    parser-ops.sml
+    parser.sig
+    parser.sml
+    value.sig
+    value.sml
+    prim.sig
+    prim.sml
+    evaluator.sig
+    evaluator.sml
+    file-slurper.sml
+    error-reporter.sig
+    error-reporter.sml
+    main.sml
+  end
+end
