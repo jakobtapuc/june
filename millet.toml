@@ -2,6 +2,9 @@ version = 1
 [workspace]
 root = "src/june.mlb"
 
+[language]
+fixity-across-files = true
+
 [language.successor-ml]
 do-dec = true
 opt-bar = true
