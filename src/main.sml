@@ -1,49 +1,6 @@
-(* val fileName = case CommandLine.arguments () of
-  | [] => raise Fail "No file provided"
-  | f :: _ => f
-
-val input = FileSlurper.slurp fileName
-
-val lexed = Lexer.lex input
-val parsed = Parser.top lexed
-  handle
-    | Parser.Parser (msg', pos) =>
-        let
-          val line = Int.toString (#line pos)
-          val column = Int.toString (#column pos)
-        in
-          print (fileName ^ ":"  ^ line ^ ":" ^ column ^ ": " ^ msg')
-        end
-(* val parseString =
-  case Parser.top lexed of
-    NONE =>
-      "Parse error"
-  | SOME (ast, _) =>
-      String.concatWith "\n" (List.map Ast.toString ast)
-
-
-do print (parseString ^ "\n") *)
-
-val _ = 
-  case parsed of
-    | NONE => print "Parse error\n"
-    | SOME (exprs, _) =>
-        let
-          val values =
-            List.map (Evaluator.evaluate Evaluator.initialEnv) exprs
-        in
-          List.app
-            ignore
-            values
-        end
-  handle
-    | Value.Value msg =>
-        print (fileName ^ ": Evaluation failed: " ^ msg ^ "\n")
-       *)
-
 val fileName = case CommandLine.arguments () of
   | [] => raise Fail "No file provided"
-  | f :: _ => f
+  | fileName' :: _ => fileName'
 
 val input = FileSlurper.slurp fileName
 
