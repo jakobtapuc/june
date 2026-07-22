@@ -1,8 +1,9 @@
-signature JUNE_AST = sig
+signature JUNE_AST =
+sig
   datatype ast =
-    | Integer of int * Token.position
-    | Symbol of string * Token.position
-    | List of ast list * Token.position
+  | Integer of int * Token.position
+  | Symbol of string * Token.position
+  | List of ast list * Token.position
 
-  val toString : ast -> string
+  val toString: ast -> string
 end

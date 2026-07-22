@@ -1,21 +1,18 @@
-signature JUNE_TOKEN = sig
-  type position =
-    { line : int
-    , column : int }
+signature JUNE_TOKEN =
+sig
+  type position = {line: int, column: int}
 
   datatype token =
-    | LParen
-    | RParen
-    | Quote
-    | Integer of int
-    | Boolean of bool
-    | Symbol of string
-    | String of string
-    | Eof
+  | LParen
+  | RParen
+  | Quote
+  | Integer of int
+  | Boolean of bool
+  | Symbol of string
+  | String of string
+  | Eof
 
-  type t =
-    { token : token
-    , pos : position }
+  type t = {token: token, pos: position}
 
-  val toString : t -> string
+  val toString: t -> string
 end
