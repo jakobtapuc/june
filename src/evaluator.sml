@@ -1,38 +1,6 @@
 structure Evaluator :> JUNE_EVALUATOR =
 struct
-  local open Value
-  in
-    fun lookup (Env envRef) (name, pos) =
-      let
-        fun loop [] =
-              raise Value ("Unbound variable: " ^ name, pos)
-          | loop ((name', value) :: rest) =
-              if name = name' then !value else loop rest
-      in
-        loop envRef
-      end
-
-    fun insert (Env env) name value =
-      Env ((name, value) :: env)
-
-    val initialEnv = Env
-      [ ("+", ref <| Primitive Prim.add)
-      , ("-", ref <| Primitive Prim.sub)
-      , ("*", ref <| Primitive Prim.mult)
-      , ("/", ref <| Primitive Prim.div')
-      , ("and", ref <| Primitive Prim.and')
-      , ("or", ref <| Primitive Prim.or')
-      , ("eq?", ref <| Primitive Prim.eq)
-      , ("show", ref <| Primitive Prim.show)
-      , ("show-ln", ref <| Primitive Prim.showLn)
-      , ("list", ref <| Primitive Prim.list')
-      , ("cons", ref <| Primitive Prim.cons)
-      , ("car", ref <| Primitive Prim.car)
-      , ("cdr", ref <| Primitive Prim.cdr)
-      ]
-  end
-
-  local open Ast
+  local open Ast Env
   in
     fun evaluateArgs (Value.Env env) [] = ([], Value.Env env)
       | evaluateArgs (Value.Env env) (expr :: rest) =
@@ -96,26 +64,9 @@ struct
               , Value.Env env
               )
           end
-      | List (Symbol ("let", pos) :: List (bindings, _) :: body, _) =>
-          let
-            fun transformBinding (List ([Symbol (name, _), expr'], _)) =
-                  (name, expr')
-              | transformBinding _ =
-                  raise Value.Value ("Malformed let binding", pos)
-
-            val transformed = List.map transformBinding bindings
-
-            val names =
-              List.map (fn (name, _) => Symbol (name, pos)) transformed
-
-            val exprs = List.map (fn (_, expr') => expr') transformed
-
-            val lambda = List
-              (Symbol ("lambda", pos) :: List (names, pos) :: body, pos)
-
-            val app = List (lambda :: exprs, pos)
-          in
-            evaluate (Value.Env env) app
+      | (let' as (List (Symbol ("let", _) :: List (_, _) :: _, _))) =>
+          let val expanded = Expander.expandLet let'
+          in evaluate (Value.Env env) expanded
           end
       | List (Symbol ("if", pos) :: rest, _) =>
           (case rest of

@@ -22,7 +22,7 @@ val _ =
                   in evalList env' rest
                   end
           in
-            evalList Evaluator.initialEnv exprs
+            evalList Env.initialEnv exprs
           end
   in
     ()

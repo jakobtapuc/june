@@ -18,6 +18,10 @@ in
     value.sml
     prim.sig
     prim.sml
+    env.sig
+    env.sml
+    expander.sig
+    expander.sml
     evaluator.sig
     evaluator.sml
     file-slurper.sml
