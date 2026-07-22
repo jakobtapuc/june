@@ -1,4 +1,5 @@
 MLTON := mlton
+SMLFMT := smlfmt
 TARGET := build/june
 MLB := src/june.mlb
 
@@ -12,3 +13,10 @@ $(TARGET): $(MLB)
 
 clean:
 	rm -f $(TARGET)
+
+fmt:
+	$(SMLFMT) --force \
+		-allow-successor-ml true \
+		-allow-opt-bar true \
+		-allow-record-pun-exps true \
+		$(MLB)

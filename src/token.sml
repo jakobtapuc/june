@@ -7,6 +7,7 @@ struct
   | RParen
   | Quote
   | Integer of int
+  | Float of real
   | Boolean of bool
   | Symbol of string
   | String of string
@@ -19,8 +20,10 @@ struct
       fun stringifyToken LParen = "LParen"
         | stringifyToken RParen = "RParen"
         | stringifyToken Quote = "Quote"
-        | stringifyToken (Integer n) =
-            "Integer(" ^ (Int.toString n) ^ ")"
+        | stringifyToken (Integer i) =
+            "Integer(" ^ (Int.toString i) ^ ")"
+        | stringifyToken (Float f) =
+            "Float(" ^ (Real.toString f) ^ ")"
         | stringifyToken (Boolean b) =
             "Boolean(" ^ (Bool.toString b) ^ ")"
         | stringifyToken (Symbol s) = "Symbol(" ^ s ^ ")"

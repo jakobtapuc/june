@@ -7,6 +7,7 @@ sig
   | RParen
   | Quote
   | Integer of int
+  | Float of real
   | Boolean of bool
   | Symbol of string
   | String of string

@@ -24,12 +24,12 @@ my aim isn't to create a compliant Scheme implementation. Hence the name which i
 - [x] Error reporting with line positions<super>1</super>
 - [x] Lists
 - [x] Arithmetic operations
-- [ ] Proper quoting
-- [ ] Strings
-- [ ] Floats
+- [x] Proper quoting
+- [x] Strings
+- [x] Floats
 - [x] Displaying values
 - [x] `define` for simple bindings
-- [ ] Lambdas (Again, this is a WIP)
+- [x] Lambdas
 - [x] Primitive `if`
 - [ ] AST desugaring for `define`, `let`, and `cond`<super>2</super>
 

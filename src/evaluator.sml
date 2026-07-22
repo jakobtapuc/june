@@ -2,24 +2,33 @@ structure Evaluator :> JUNE_EVALUATOR =
 struct
   local open Value
   in
-    fun lookup (Env []) (name, pos) =
-          raise Value ("Unbound variable: " ^ name, pos)
-      | lookup (Env ((name', value) :: rest)) (name, pos) =
-          if name = name' then value else lookup (Env rest) (name, pos)
+    fun lookup (Env envRef) (name, pos) =
+      let
+        fun loop [] =
+              raise Value ("Unbound variable: " ^ name, pos)
+          | loop ((name', value) :: rest) =
+              if name = name' then !value else loop rest
+      in
+        loop envRef
+      end
 
     fun insert (Env env) name value =
       Env ((name, value) :: env)
 
     val initialEnv = Env
-      [ ("+", Primitive Prim.add)
-      , ("-", Primitive Prim.sub)
-      , ("*", Primitive Prim.mult)
-      , ("/", Primitive Prim.div')
-      , ("and", Primitive Prim.and')
-      , ("or", Primitive Prim.or')
-      , ("eq?", Primitive Prim.eq)
-      , ("show", Primitive Prim.show)
-      , ("show-ln", Primitive Prim.showLn)
+      [ ("+", ref <| Primitive Prim.add)
+      , ("-", ref <| Primitive Prim.sub)
+      , ("*", ref <| Primitive Prim.mult)
+      , ("/", ref <| Primitive Prim.div')
+      , ("and", ref <| Primitive Prim.and')
+      , ("or", ref <| Primitive Prim.or')
+      , ("eq?", ref <| Primitive Prim.eq)
+      , ("show", ref <| Primitive Prim.show)
+      , ("show-ln", ref <| Primitive Prim.showLn)
+      , ("list", ref <| Primitive Prim.list')
+      , ("cons", ref <| Primitive Prim.cons)
+      , ("car", ref <| Primitive Prim.car)
+      , ("cdr", ref <| Primitive Prim.cdr)
       ]
   end
 
@@ -47,7 +56,7 @@ struct
 
             val bound = zip params args
             val env' =
-              List.foldl (fn ((p, a), env') => insert env' p a) env bound
+              List.foldl (fn ((p, a), env') => insert env' p (ref a)) env bound
             val (result, _) = evaluateSeq pos' env' body
           in
             result
@@ -57,12 +66,16 @@ struct
     and evaluate (Value.Env env) expr =
       case expr of
       | Integer (n, _) => (Value.Integer n, (Value.Env env))
+      | Float (f, _) => (Value.Float f, (Value.Env env))
+      | String (s, _) => (Value.String s, (Value.Env env))
       | Symbol ("#t", _) => (Value.Boolean true, (Value.Env env))
       | Symbol ("#f", _) => (Value.Boolean false, (Value.Env env))
       | Symbol ("#undef", _) => (Value.Undef, (Value.Env env))
       | Symbol (s, pos) => (lookup (Value.Env env) (s, pos), (Value.Env env))
       | List ([], pos) =>
           raise Value.Value ("Cannot evaluate an empty list", pos)
+      | List (Symbol ("quote", _) :: [quoted], _) =>
+          (quoteValue quoted, Value.Env env)
       | List (Symbol ("lambda", pos) :: List (params, _) :: body, _) =>
           let
             fun paramName (Symbol (p, _)) = p
@@ -83,7 +96,27 @@ struct
               , Value.Env env
               )
           end
+      | List (Symbol ("let", pos) :: List (bindings, _) :: body, _) =>
+          let
+            fun transformBinding (List ([Symbol (name, _), expr'], _)) =
+                  (name, expr')
+              | transformBinding _ =
+                  raise Value.Value ("Malformed let binding", pos)
 
+            val transformed = List.map transformBinding bindings
+
+            val names =
+              List.map (fn (name, _) => Symbol (name, pos)) transformed
+
+            val exprs = List.map (fn (_, expr') => expr') transformed
+
+            val lambda = List
+              (Symbol ("lambda", pos) :: List (names, pos) :: body, pos)
+
+            val app = List (lambda :: exprs, pos)
+          in
+            evaluate (Value.Env env) app
+          end
       | List (Symbol ("if", pos) :: rest, _) =>
           (case rest of
            | [cond, onTrue, onFalse] =>
@@ -119,8 +152,11 @@ struct
           (case rest of
            | [Symbol (name, _), expr'] =>
                let
-                 val (value, (Value.Env env')) = evaluate (Value.Env env) expr'
-                 val env'' = insert (Value.Env env') name value
+                 val cell = ref Value.Undef
+                 val env' = insert (Value.Env env) name cell
+                 val (value, _) = evaluate env' expr'
+                 val () = cell := value
+                 val env'' = insert env' name (ref value)
                in
                  (Value.Undef, env'')
                end
@@ -140,5 +176,15 @@ struct
           end
       | evaluateSeq pos _ [] =
           raise Value.Value ("Empty body", pos)
+    and quoteList [] = Value.Nil
+      | quoteList (x :: xs) =
+          Value.Pair (quoteValue x, quoteList xs)
+    and quoteValue ast =
+      case ast of
+      | Integer (n, _) => Value.Integer n
+      | Float (f, _) => Value.Float f
+      | String (s, _) => Value.String s
+      | Symbol (s, _) => Value.Symbol s
+      | List (xs, _) => quoteList xs
   end
 end

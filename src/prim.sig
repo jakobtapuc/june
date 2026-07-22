@@ -17,5 +17,10 @@ sig
 
   val show: prim_func
   val showLn: prim_func
+
+  val list': prim_func
+  val cons: prim_func
+  val car: prim_func
+  val cdr: prim_func
 (* val read : t *)
 end

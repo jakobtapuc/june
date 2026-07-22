@@ -25,6 +25,8 @@ struct
     | NONE => p2 tokens
     | result => result
 
+  fun op<|> (p1, p2) = orElse p1 p2
+
   fun satisfy predicate (tokens: Token.t list) =
     case tokens of
     | [] => NONE
@@ -38,14 +40,16 @@ struct
         | SOME (values, final) => SOME (value :: values, final)
         | NONE => SOME ([value], rest)
 
-  fun token expected =
-    satisfy (fn t => (#token t) = expected)
+  fun token predicate =
+    satisfy (fn t => predicate (#token t))
 
-  val eof = token Token.Eof
+  val isEof = (fn Token.Eof => true | _ => false)
 
-  val lparen = token Token.LParen
+  val eof = token isEof
 
-  val rparen = token Token.RParen
+  val lparen = token (fn Token.LParen => true | _ => false)
+
+  val rparen = token (fn Token.RParen => true | _ => false)
 
   val integer =
     map
@@ -56,6 +60,28 @@ struct
       (satisfy (fn t =>
          case (#token t) of
          | Token.Integer _ => true
+         | _ => false))
+
+  val float =
+    map
+      (fn t =>
+         case (#token t) of
+           Token.Float n => Ast.Float (n, #pos t)
+         | _ => raise Parser ("Impossible path", #pos t))
+      (satisfy (fn t =>
+         case (#token t) of
+         | Token.Float _ => true
+         | _ => false))
+
+  val string' =
+    map
+      (fn t =>
+         case (#token t) of
+         | Token.String s => Ast.String (s, (#pos t))
+         | _ => raise Parser ("Impossible path", (#pos t)))
+      (satisfy (fn t =>
+         case (#token t) of
+         | Token.String _ => true
          | _ => false))
 
   val symbol =
@@ -102,7 +128,7 @@ struct
             | SOME (_, rest'') => SOME (Ast.List (items, (#pos lp)), rest'')
 
   and expr tokens =
-    orElse integer (orElse symbol (orElse list' quoteExpr)) tokens
+    integer <|> float <|> string' <|> symbol <|> list' <|> quoteExpr <| tokens
 
   fun seq p1 p2 =
     p1 >>= (fn x => map (fn y => (x, y)) p2)
@@ -110,7 +136,7 @@ struct
   fun top tokens =
     case many expr tokens of
       SOME (expressions, rest) =>
-        (case token Token.Eof rest of
+        (case token isEof rest of
          | SOME (_, []) => SOME (expressions, [])
          | SOME (_, tok :: _) => raise Parser ("Unexpected tokens", #pos tok)
          | NONE => raise Parser ("Expected EOF", #pos (hd rest)))
