@@ -30,4 +30,4 @@ val _ =
     ()
   end
   handle
-    | exn' => print <| (ErrorReporter.report fileName exn') ^ "\n"
+    | exn' => print <| ErrorReporter.report fileName exn' ^ "\n"
