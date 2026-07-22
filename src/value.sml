@@ -1,18 +1,19 @@
 structure Value :> JUNE_VALUE = struct
   exception Value of (string * Token.position)
 
-  datatype t =
+  datatype v =
     | Integer of int
     | Boolean of bool
-    | Primitive of (t list -> Token.position -> t)
+    | Primitive of (v list -> Token.position -> v)
     | Closure of
         { params : string list
-        , body : Ast.t
-        , env : env }
-    | Quoted of t
+        , body : Ast.ast list
+        , env : env
+        , pos : Token.position }
+    | Quoted of v
     | Undef
   
-  and env = Env of (string * t) list
+  and env = Env of (string * v) list
 
   fun toString (Integer n) = Int.toString n
     | toString (Boolean true) = "#t"

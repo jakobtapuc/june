@@ -1,7 +1,9 @@
 signature JUNE_PRIM = sig
-  include JUNE_VALUE
+  type v = Value.v
 
-  type prim_func = t list -> Token.position -> t
+  type pos = Token.position
+
+  type prim_func = v list -> pos -> v
 
   val add : prim_func
   val sub : prim_func

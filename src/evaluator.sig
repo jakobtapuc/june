@@ -1,9 +1,7 @@
 signature JUNE_EVALUATOR = sig
-  include JUNE_VALUE
+  val initialEnv : Value.env
 
-  val initialEnv : env
+  val apply : Value.v -> Value.v list -> Token.position -> Value.v
 
-  val apply : t -> t list -> Token.position -> t
-
-  val evaluate : env -> Ast.t -> (t * env)
+  val evaluate : Value.env -> Ast.ast -> (Value.v * Value.env)
 end

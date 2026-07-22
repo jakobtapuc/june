@@ -1,7 +1,13 @@
-structure Prim : JUNE_PRIM = struct
+structure Prim :> JUNE_PRIM = struct
   open Value
 
-  type prim_func = t list -> Token.position -> t
+  type v = Value.v
+
+  type pos = Token.position
+
+  type prim_func = v list -> pos -> v
+
+  type prim_func = v list -> Token.position -> v
 
   fun add xs pos =
       let
@@ -69,7 +75,6 @@ structure Prim : JUNE_PRIM = struct
     Boolean (x = y)
     | eq _ pos = raise Value ("Non-integer argument when applying `eq`", pos)
 
-
   fun show xs _ =
     let
       fun unwrap x = toString x
@@ -81,9 +86,9 @@ structure Prim : JUNE_PRIM = struct
       Undef
     end
 
-  fun showLn x _ =
+  fun showLn x pos =
     let
-      do ignore (show x)
+      do ignore (show x pos)
       do print "\n"
     in
       Undef

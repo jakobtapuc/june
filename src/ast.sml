@@ -1,8 +1,8 @@
 structure Ast :> JUNE_AST = struct
-  datatype t =
+  datatype ast =
     | Integer of int * Token.position
     | Symbol of string * Token.position
-    | List of t list * Token.position
+    | List of ast list * Token.position
 
 fun toString expr =
   let

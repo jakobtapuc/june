@@ -17,5 +17,5 @@ signature JUNE_PARSER = sig
 
   val run : 'a t -> Token.t list -> ('a * Token.t list) option
 
-  val top : Token.t list -> (Ast.t list * Token.position list) option
+  val top : Token.t list -> (Ast.ast list * Token.position list) option
 end

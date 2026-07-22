@@ -89,24 +89,37 @@ structure Parser :> JUNE_PARSER = struct
   fun quoteExpr tokens =
     case satisfy (fn t =>
       case #token t of
-        Token.Quote => true
-      | _ => false) tokens of
-      NONE =>
-        NONE
+        | Token.Quote => true
+        | _ => false) tokens of
+      | NONE =>
+          NONE
 
-    | SOME (quoteTok, rest) =>
-        case expr rest of
-          NONE =>
-            raise Parser ("Expected expression after quote", #pos quoteTok)
+      | SOME (quoteTok, rest) =>
+          case expr rest of
+            | NONE =>
+                raise Parser ("Expected expression after quote", #pos quoteTok)
+            | SOME (value, rest') =>
+                SOME
+                  (Ast.List
+                    ([ Ast.Symbol ("quote", #pos quoteTok)
+                    , value
+                    ],
+                    #pos quoteTok),
+                  rest')
 
-        | SOME (value, rest') =>
-            SOME
-              (Ast.List
-                ([ Ast.Symbol ("quote", #pos quoteTok)
-                , value
-                ],
-                #pos quoteTok),
-              rest')
+  and list' tokens =
+    case lparen tokens of
+      | NONE => NONE
+      | SOME (lp, rest) =>
+          case many expr rest of
+            | NONE => NONE
+            | SOME (items, rest') =>
+                case rparen rest' of
+                  | NONE => raise Parser ("Unclosed parenthesis", (#pos lp))
+                  | SOME (_, rest'') =>
+                      SOME (
+                        Ast.List (items, (#pos lp)),
+                        rest'')
 
   and expr tokens =
     orElse
@@ -118,20 +131,6 @@ structure Parser :> JUNE_PARSER = struct
           quoteExpr))
       tokens
 
-  and list' tokens =
-  case lparen tokens of
-    | NONE => NONE
-    | SOME (lp, rest) =>
-        case many expr rest of
-          NONE => NONE
-        | SOME (items, rest') =>
-            case rparen rest' of
-              NONE => raise Parser ("Unclosed parenthesis", (#pos lp))
-            | SOME (_, rest'') =>
-                SOME (
-                  Ast.List (items, (#pos lp)),
-                  rest'')
-
   fun seq p1 p2 =
     p1 >>= (fn x =>
       map (fn y => (x, y)) p2)
@@ -140,7 +139,7 @@ structure Parser :> JUNE_PARSER = struct
     case many expr tokens of
       SOME (expressions, rest) =>
         (case token Token.Eof rest of
-            SOME (_, []) =>
+          | SOME (_, []) =>
               SOME (expressions, [])
           | SOME (_, tok :: _) =>
               raise Parser ("Unexpected tokens", #pos tok)

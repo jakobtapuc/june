@@ -1,4 +1,4 @@
-structure Token : JUNE_TOKEN = struct
+structure Token :> JUNE_TOKEN = struct
   type position =
     { line : int
     , column : int }

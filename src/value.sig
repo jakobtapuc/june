@@ -1,18 +1,19 @@
 signature JUNE_VALUE = sig
   exception Value of (string * Token.position)
 
-  datatype t =
+  datatype v =
     | Integer of int
     | Boolean of bool
-    | Primitive of (t list -> Token.position -> t)
+    | Primitive of (v list -> Token.position -> v)
     | Closure of
         { params : string list
-        , body : Ast.t
-        , env : env }
-    | Quoted of t
+        , body : Ast.ast list
+        , env : env
+        , pos : Token.position }
+    | Quoted of v
     | Undef
   
-  and env = Env of (string * t) list
+  and env = Env of (string * v) list
 
-  val toString : t -> string
+  val toString : v -> string
 end
