@@ -30,7 +30,7 @@ my aim isn't to create a compliant Scheme implementation. Hence the name which i
 - [x] Displaying values
 - [x] `define` for simple bindings
 - [ ] Lambdas (Again, this is a WIP)
-- [ ] Primitive `if`
+- [x] Primitive `if`
 - [ ] AST desugaring for `define`, `let`, and `cond`<super>2</super>
 
 1\. This has been my goal from the very beginning, and it's something that most of the implementations my brain has been trying to hoard didn't include.
