@@ -1,4 +1,10 @@
 signature JUNE_EXPANDER =
 sig
-  val expandLet: Ast.ast -> Ast.ast
+  type t = Ast.ast -> Ast.ast
+
+  val expandLet: t
+
+  val expandAnd: t
+
+  val expandOr: t
 end

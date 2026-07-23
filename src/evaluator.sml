@@ -99,6 +99,14 @@ struct
                       end)
                end
            | _ => raise Value.Value ("Malformed `if`", pos))
+      | (and' as (List (Symbol ("and", _) :: _, _))) =>
+          let val expanded = Expander.expandAnd and'
+          in evaluate (Value.Env env) expanded
+          end
+      | (or' as (List (Symbol ("or", _) :: _, _))) =>
+          let val expanded = Expander.expandOr or'
+          in evaluate (Value.Env env) expanded
+          end
       | List (Symbol ("define", pos) :: rest, _) =>
           (case rest of
            | [Symbol (name, _), expr'] =>

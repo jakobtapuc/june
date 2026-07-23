@@ -54,37 +54,15 @@ struct
       Integer folded
     end
 
-  fun and' xs pos =
-    let
-      fun unwrap (Boolean x) = x
-        | unwrap _ =
-            raise Value ("Non-boolean argument supplied to `and`", pos)
-      val unwrapped = List.map unwrap xs
-      val folded = List.foldl (fn (x, acc) => x andalso acc) true unwrapped
-    in
-      Boolean folded
-    end
-
-  fun or' xs pos =
-    let
-      fun unwrap (Boolean x) = x
-        | unwrap _ =
-            raise Value ("Non-boolean argument supplied to `or`", pos)
-      val unwrapped = List.map unwrap xs
-      val folded = List.foldl (fn (x, acc) => x orelse acc) false unwrapped
-    in
-      Boolean folded
-    end
-
-  fun eq [a, b] pos =
+  fun eq [a, b] _ =
         let
-          fun eq' (Integer x) (Integer y) _ = (x = y)
-            | eq' (String x) (String y) _ = (x = y)
-            | eq' (Boolean x) (Boolean y) _ = (x = y)
-            | eq' (Symbol x) (Symbol y) _ = (x = y)
-            | eq' Nil Nil _ = true
-            | eq' Undef Undef _ = true
-            | eq' (Float x) (Float y) _ =
+          fun eq' (Integer x) (Integer y) = (x = y)
+            | eq' (String x) (String y) = (x = y)
+            | eq' (Boolean x) (Boolean y) = (x = y)
+            | eq' (Symbol x) (Symbol y) = (x = y)
+            | eq' Nil Nil = true
+            | eq' Undef Undef = true
+            | eq' (Float x) (Float y) =
                 let
                   fun floatEq x' y' =
                     let val order = Real.compare (x', y')
@@ -93,19 +71,26 @@ struct
                 in
                   floatEq x y
                 end
-            | eq' (Pair (x, y)) (Pair (x', y')) pos' =
+            | eq' (Pair (x, y)) (Pair (x', y')) =
                 let
-                  val aEqual = eq' x x' pos'
-                  val bEqual = eq' y y' pos'
+                  val aEqual = eq' x x'
+                  val bEqual = eq' y y'
                 in
                   aEqual = bEqual
                 end
-            | eq' _ _ _ = false
+            | eq' _ _ = false
         in
-          Boolean (eq' a b pos)
+          Boolean (eq' a b)
         end
     | eq _ pos =
         raise Value ("Invalid number of arguments supplied to `eq?`", pos)
+
+  fun not' [Boolean x] _ =
+        Boolean (not x)
+    | not' [_] pos =
+        raise Value ("Non-boolean argument supplied to `not`", pos)
+    | not' _ pos =
+        raise Value ("Invalid number of arguments supplied to `not`", pos)
 
   fun show xs _ =
     let

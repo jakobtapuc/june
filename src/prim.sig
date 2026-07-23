@@ -11,9 +11,8 @@ sig
   val mult: prim_func
   val div': prim_func
 
-  val and': prim_func
-  val or': prim_func
   val eq: prim_func
+  val not': prim_func
 
   val show: prim_func
   val showLn: prim_func
