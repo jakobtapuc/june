@@ -8,7 +8,7 @@ sig
 
   val insert: Value.env -> string -> Value.v -> unit
 
-  val set: Value.env -> string -> Value.v -> unit
+  val set: Value.env -> (string * Token.position) -> Value.v -> unit
 
   val prim: Value.env
 end
