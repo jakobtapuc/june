@@ -81,4 +81,28 @@ struct
         end
 
     | expandOr _ = raise Fail "Unreachable"
+
+  fun expandCond (List (Symbol ("cond", pos) :: clauses, _)) =
+        let
+          fun expand [] =
+                raise Value.Value ("Empty cond", pos)
+            | expand (List ([Symbol ("else", _), expr], _) :: []) = expr
+            | expand (List ([test, expr], _) :: rest) =
+                List ([Symbol ("if", pos), test, expr, expand rest], pos)
+            | expand _ =
+                raise Value.Value ("Malformed cond", pos)
+        in
+          expand clauses
+        end
+    | expandCond _ = raise Fail "Unreachable cond"
+
+  fun expand ast =
+    case ast of
+    | List (Symbol ("let", _) :: List (_, _) :: _, _) => expand (expandLet ast)
+    | List (Symbol ("and", _) :: _, _) => expand (expandAnd ast)
+    | List (Symbol ("or", _) :: _, _) => expand (expandOr ast)
+    | List (Symbol ("cond", _) :: List (_, _) :: _, _) =>
+        expand (expandCond ast)
+    | List (xs, pos) => List (List.map expand xs, pos)
+    | x => x
 end
