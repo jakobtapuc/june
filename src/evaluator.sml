@@ -104,11 +104,22 @@ struct
                let
                  val () = insert (Value.Env env) name Value.Unit
                  val (value, _) = evaluate (Value.Env env) expr'
-                 val () = set (Value.Env env) name value
+                 val () = set (Value.Env env) (name, pos) value
                in
                  (Value.Unit, (Value.Env env))
                end
            | _ => raise Value.Value ("Malformed `define`", pos))
+      | List (Symbol ("set!", pos) :: rest, _) =>
+          (case rest of
+           | [Symbol (name, _), expr'] =>
+               let
+                 val _ = lookup (Value.Env env) (name, pos)
+                 val (value, _) = evaluate (Value.Env env) expr'
+                 val () = set (Value.Env env) (name, pos) value
+               in
+                 (Value.Unit, (Value.Env env))
+               end
+           | _ => raise Value.Value ("Malformed `set!`", pos))
       | List (f :: args, pos) =>
           let
             val (fnValue, (Value.Env env')) = evaluate (Value.Env env) f
@@ -117,6 +128,14 @@ struct
           in
             (applied, env'')
           end
+
+
+    (* 
+    expected `{ column : int, line : int } -> Value.env -> Ast.ast list -> Value.v * Value.env`
+       found `{ column : int, line : int } -> Value.env -> Value.v list -> Value.v * Value.env`
+    
+     *)
+
     and evaluateSeq _ env [expr] = evaluate env expr
       | evaluateSeq pos env (expr :: rest) =
           let val (_, env') = evaluate env expr

@@ -27,10 +27,13 @@ struct
   fun insert (Env {bindings, ...}) name value =
     HashTable.insert bindings (name, ref value)
 
-  fun set (Env {bindings, ...}) name value =
+  fun set (Env {bindings, parent}) (name, pos) value =
     case HashTable.find bindings name of
     | SOME cell => cell := value
-    | NONE => raise Fail "Impossible path"
+    | NONE =>
+        case parent of
+        | SOME parent' => set parent' (name, pos) value
+        | NONE => raise Value ("Unbound variable: " ^ name, pos)
 
   val prim =
     let
