@@ -39,18 +39,18 @@ struct
     let
       val prim' = empty ()
 
-      val () = insert prim' "+" <| Primitive Prim.add
-      val () = insert prim' "-" <| Primitive Prim.sub
-      val () = insert prim' "*" <| Primitive Prim.mult
-      val () = insert prim' "/" <| Primitive Prim.div'
-      val () = insert prim' "eq?" <| Primitive Prim.eq
-      val () = insert prim' "not" <| Primitive Prim.not'
-      val () = insert prim' "show" <| Primitive Prim.show
-      val () = insert prim' "show-ln" <| Primitive Prim.showLn
-      val () = insert prim' "list" <| Primitive Prim.list'
-      val () = insert prim' "cons" <| Primitive Prim.cons
-      val () = insert prim' "car" <| Primitive Prim.car
-      val () = insert prim' "cdr" <| Primitive Prim.cdr
+      val () = insert prim' "+" <| VPrimitive Prim.add
+      val () = insert prim' "-" <| VPrimitive Prim.sub
+      val () = insert prim' "*" <| VPrimitive Prim.mult
+      val () = insert prim' "/" <| VPrimitive Prim.div'
+      val () = insert prim' "eq?" <| VPrimitive Prim.eq
+      val () = insert prim' "not" <| VPrimitive Prim.not'
+      val () = insert prim' "show" <| VPrimitive Prim.show
+      val () = insert prim' "show-ln" <| VPrimitive Prim.showLn
+      val () = insert prim' "list" <| VPrimitive Prim.list'
+      val () = insert prim' "cons" <| VPrimitive Prim.cons
+      val () = insert prim' "car" <| VPrimitive Prim.car
+      val () = insert prim' "cdr" <| VPrimitive Prim.cdr
     in
       prim'
     end

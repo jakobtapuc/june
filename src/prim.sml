@@ -12,64 +12,64 @@ struct
 
   fun add xs pos =
     let
-      fun unwrap (Integer x) = x
+      fun unwrap (VInteger x) = x
         | unwrap _ =
             raise Value ("Non-integer argument supplied to `+`", pos)
       val unwrapped = List.map unwrap xs
       val folded = List.foldl op+ 0 unwrapped
     in
-      Integer folded
+      VInteger folded
     end
 
   fun sub [] pos =
         raise Value ("`-` expects at least 1 argument, 0 given", pos)
-    | sub [Integer x] _ =
-        Integer (~x)
-    | sub (Integer x :: rest) pos =
+    | sub [VInteger x] _ =
+        VInteger (~x)
+    | sub (VInteger x :: rest) pos =
         let
-          fun unwrap (Integer n) = n
+          fun unwrap (VInteger n) = n
             | unwrap _ =
                 raise Value ("Non-integer argument supplied to `-`", pos)
 
           val ns = List.map unwrap rest
           val result = List.foldl (fn (n, acc) => acc - n) x ns
         in
-          Integer result
+          VInteger result
         end
     | sub _ pos =
         raise Value ("Non-integer argument supplied to `-`", pos)
 
   fun mult xs pos =
     let
-      fun unwrap (Integer x) = x
+      fun unwrap (VInteger x) = x
         | unwrap _ =
             raise Value ("Non-integer argument supplied to `*`", pos)
       val unwrapped = List.map unwrap xs
       val folded = List.foldl op* 1 unwrapped
     in
-      Integer folded
+      VInteger folded
     end
 
   fun div' xs pos =
     let
-      fun unwrap (Integer x) = x
+      fun unwrap (VInteger x) = x
         | unwrap _ =
             raise Value ("Non-integer argument supplied to `/`", pos)
       val unwrapped = List.map unwrap xs
       val folded = List.foldl (op div) 1 unwrapped
     in
-      Integer folded
+      VInteger folded
     end
 
   fun eq [a, b] _ =
         let
-          fun eq' (Integer x) (Integer y) = (x = y)
-            | eq' (String x) (String y) = (x = y)
-            | eq' (Boolean x) (Boolean y) = (x = y)
-            | eq' (Symbol x) (Symbol y) = (x = y)
-            | eq' Nil Nil = true
-            | eq' Unit Unit = true
-            | eq' (Float x) (Float y) =
+          fun eq' (VInteger x) (VInteger y) = (x = y)
+            | eq' (VString x) (VString y) = (x = y)
+            | eq' (VBoolean x) (VBoolean y) = (x = y)
+            | eq' (VSymbol x) (VSymbol y) = (x = y)
+            | eq' VNil VNil = true
+            | eq' VUnit VUnit = true
+            | eq' (VFloat x) (VFloat y) =
                 let
                   fun floatEq x' y' =
                     let val order = Real.compare (x', y')
@@ -78,7 +78,7 @@ struct
                 in
                   floatEq x y
                 end
-            | eq' (Pair (x, y)) (Pair (x', y')) =
+            | eq' (VPair (x, y)) (VPair (x', y')) =
                 let
                   val aEqual = eq' x x'
                   val bEqual = eq' y y'
@@ -87,7 +87,7 @@ struct
                 end
             | eq' _ _ = false
         in
-          Boolean (eq' a b)
+          VBoolean (eq' a b)
         end
     | eq (args as _) pos =
         raise Value
@@ -96,8 +96,8 @@ struct
           , pos
           )
 
-  fun not' [Boolean x] _ =
-        Boolean (not x)
+  fun not' [VBoolean x] _ =
+        VBoolean (not x)
     | not' [_] pos =
         raise Value ("Non-boolean argument supplied to `not`", pos)
     | not' _ pos =
@@ -105,14 +105,14 @@ struct
 
   fun show xs _ =
     let
-      fun unwrap (String s) = s
+      fun unwrap (VString s) = s
         | unwrap v = toString v
       val unwrapped = List.map unwrap xs
       val folded = String.concatWith " " unwrapped
 
       val () = print folded
     in
-      Unit
+      VUnit
     end
 
   fun showLn x pos =
@@ -120,26 +120,26 @@ struct
       val () = ignore (show x pos)
       val () = print "\n"
     in
-      Unit
+      VUnit
     end
 
   fun list' xs _ =
-    List.foldr (fn (x, acc) => Pair (x, acc)) Nil xs
+    List.foldr (fn (x, acc) => VPair (x, acc)) VNil xs
 
-  fun cons [x, Pair (y, z)] _ =
-        Pair (x, Pair (y, z))
-    | cons [x, Nil] _ = Pair (x, Nil)
-    | cons [x, y] _ = Pair (x, y)
+  fun cons [x, VPair (y, z)] _ =
+        VPair (x, VPair (y, z))
+    | cons [x, VNil] _ = VPair (x, VNil)
+    | cons [x, y] _ = VPair (x, y)
     | cons _ pos =
         raise Value ("Invalid number of arguments supplied to `cons`", pos)
 
-  fun car [Pair (x, _)] _ = x
+  fun car [VPair (x, _)] _ = x
     | car [_] pos =
         raise Value ("`car` expects a pair", pos)
     | car _ pos =
         raise Value ("Invalid number of arguments supplied to `car`", pos)
 
-  fun cdr [Pair (_, y)] _ = y
+  fun cdr [VPair (_, y)] _ = y
     | cdr [_] pos =
         raise Value ("`cdr` expects a pair", pos)
     | cdr _ pos =

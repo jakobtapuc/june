@@ -16,7 +16,7 @@ val _ =
 
       | SOME (exprs, _) =>
           let
-            fun evalList env [] = (Value.Unit, env)
+            fun evalList env [] = (Value.VUnit, env)
               | evalList env (expr :: rest) =
                   let
                     val expanded = Expander.expand expr
