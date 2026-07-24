@@ -1,6 +1,0 @@
-(define make-adder
-  (lambda (x)
-    (lambda (y)
-      (+ x z))))
-
-(show-ln ((make-adder 10) 7))

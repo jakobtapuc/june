@@ -21,16 +21,23 @@ struct
       Integer folded
     end
 
-  fun sub xs pos =
-    let
-      fun unwrap (Integer x) = x
-        | unwrap _ =
-            raise Value ("Non-integer argument supplied to `-`", pos)
-      val unwrapped = List.map unwrap xs
-      val folded = List.foldl op- 0 unwrapped
-    in
-      Integer folded
-    end
+  fun sub [] pos =
+        raise Value ("`-` expects at least 1 argument, 0 given", pos)
+    | sub [Integer x] _ =
+        Integer (~x)
+    | sub (Integer x :: rest) pos =
+        let
+          fun unwrap (Integer n) = n
+            | unwrap _ =
+                raise Value ("Non-integer argument supplied to `-`", pos)
+
+          val ns = List.map unwrap rest
+          val result = List.foldl (fn (n, acc) => acc - n) x ns
+        in
+          Integer result
+        end
+    | sub _ pos =
+        raise Value ("Non-integer argument supplied to `-`", pos)
 
   fun mult xs pos =
     let
@@ -38,7 +45,7 @@ struct
         | unwrap _ =
             raise Value ("Non-integer argument supplied to `*`", pos)
       val unwrapped = List.map unwrap xs
-      val folded = List.foldl op* 0 unwrapped
+      val folded = List.foldl op* 1 unwrapped
     in
       Integer folded
     end
@@ -49,7 +56,7 @@ struct
         | unwrap _ =
             raise Value ("Non-integer argument supplied to `/`", pos)
       val unwrapped = List.map unwrap xs
-      val folded = List.foldl (op div) 0 unwrapped
+      val folded = List.foldl (op div) 1 unwrapped
     in
       Integer folded
     end
@@ -61,7 +68,7 @@ struct
             | eq' (Boolean x) (Boolean y) = (x = y)
             | eq' (Symbol x) (Symbol y) = (x = y)
             | eq' Nil Nil = true
-            | eq' Undef Undef = true
+            | eq' Unit Unit = true
             | eq' (Float x) (Float y) =
                 let
                   fun floatEq x' y' =
@@ -82,8 +89,12 @@ struct
         in
           Boolean (eq' a b)
         end
-    | eq _ pos =
-        raise Value ("Invalid number of arguments supplied to `eq?`", pos)
+    | eq (args as _) pos =
+        raise Value
+          ( "Invalid number of arguments supplied to `eq?`. 2 expected but "
+            ^ (Int.toString (List.length args)) ^ " given."
+          , pos
+          )
 
   fun not' [Boolean x] _ =
         Boolean (not x)
@@ -101,7 +112,7 @@ struct
 
       val () = print folded
     in
-      Undef
+      Unit
     end
 
   fun showLn x pos =
@@ -109,7 +120,7 @@ struct
       val () = ignore (show x pos)
       val () = print "\n"
     in
-      Undef
+      Unit
     end
 
   fun list' xs _ =

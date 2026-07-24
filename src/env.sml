@@ -2,31 +2,53 @@ structure Env :> JUNE_ENV =
 struct
   open Value
 
-  fun lookup (Env envRef) (name, pos) =
+  fun empty () =
+    Env
+      { bindings =
+          HashTable.mkTable (MLton.hash, op=) (16, Fail "Missing binding")
+      , parent = NONE
+      }
+
+  fun extend (Env env) =
+    Env
+      { bindings =
+          HashTable.mkTable (MLton.hash, op=) (16, Fail "Missing binding")
+      , parent = SOME <| Env env
+      }
+
+  fun lookup (Env {bindings, parent}) (name, pos) =
+    case HashTable.find bindings name of
+    | SOME cell => !cell
+    | NONE =>
+        case parent of
+        | SOME parent' => lookup parent' (name, pos)
+        | NONE => raise Value ("Unbound variable: " ^ name, pos)
+
+  fun insert (Env {bindings, ...}) name value =
+    HashTable.insert bindings (name, ref value)
+
+  fun set (Env {bindings, ...}) name value =
+    case HashTable.find bindings name of
+    | SOME cell => cell := value
+    | NONE => raise Fail "Impossible path"
+
+  val prim =
     let
-      fun loop [] =
-            raise Value ("Unbound variable: " ^ name, pos)
-        | loop ((name', value) :: rest) =
-            if name = name' then !value else loop rest
+      val prim' = empty ()
+
+      val () = insert prim' "+" <| Primitive Prim.add
+      val () = insert prim' "-" <| Primitive Prim.sub
+      val () = insert prim' "*" <| Primitive Prim.mult
+      val () = insert prim' "/" <| Primitive Prim.div'
+      val () = insert prim' "eq?" <| Primitive Prim.eq
+      val () = insert prim' "not" <| Primitive Prim.not'
+      val () = insert prim' "show" <| Primitive Prim.show
+      val () = insert prim' "show-ln" <| Primitive Prim.showLn
+      val () = insert prim' "list" <| Primitive Prim.list'
+      val () = insert prim' "cons" <| Primitive Prim.cons
+      val () = insert prim' "car" <| Primitive Prim.car
+      val () = insert prim' "cdr" <| Primitive Prim.cdr
     in
-      loop envRef
+      prim'
     end
-
-  fun insert (Env env) name value =
-    Env ((name, value) :: env)
-
-  val initialEnv = Env
-    [ ("+", ref <| Primitive Prim.add)
-    , ("-", ref <| Primitive Prim.sub)
-    , ("*", ref <| Primitive Prim.mult)
-    , ("/", ref <| Primitive Prim.div')
-    , ("eq?", ref <| Primitive Prim.eq)
-    , ("not", ref <| Primitive Prim.not')
-    , ("show", ref <| Primitive Prim.show)
-    , ("show-ln", ref <| Primitive Prim.showLn)
-    , ("list", ref <| Primitive Prim.list')
-    , ("cons", ref <| Primitive Prim.cons)
-    , ("car", ref <| Primitive Prim.car)
-    , ("cdr", ref <| Primitive Prim.cdr)
-    ]
 end

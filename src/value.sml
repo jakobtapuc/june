@@ -13,12 +13,13 @@ struct
   | Primitive of (v list -> Token.position -> v)
   | Closure of
       {params: string list, body: Ast.ast list, env: env, pos: Token.position}
-  | Undef
+  | Unit
 
   and env =
-    Env of (string * v ref) list
+    Env of {bindings: (string, v ref) HashTable.hash_table, parent: env option}
 
-  fun toString (Integer n) = Int.toString n
+  fun toString (Integer n) =
+        if n < 0 then "-" ^ (Int.toString <| Int.abs n) else Int.toString n
     | toString (Float f) = Real.toString f
     | toString (String s) = "\"" ^ s ^ "\""
     | toString (Boolean true) = "#t"
@@ -28,7 +29,7 @@ struct
     | toString Nil = "#nil"
     | toString (Primitive _) = "<primitive>"
     | toString (Closure _) = "<closure>"
-    | toString Undef = "#undef"
+    | toString Unit = "#unit"
   and stringifyPair x y =
     let
       fun loop (Pair (h, t)) acc =

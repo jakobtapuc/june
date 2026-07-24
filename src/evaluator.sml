@@ -23,8 +23,11 @@ struct
                   raise Value.Value ("Invalid number of arguments", pos')
 
             val bound = zip params args
-            val env' =
-              List.foldl (fn ((p, a), env') => insert env' p (ref a)) env bound
+
+            val env' = extend env
+
+            val () = List.app (fn (p, a) => insert env' p a) bound
+
             val (result, _) = evaluateSeq pos' env' body
           in
             result
@@ -38,7 +41,7 @@ struct
       | String (s, _) => (Value.String s, (Value.Env env))
       | Symbol ("#t", _) => (Value.Boolean true, (Value.Env env))
       | Symbol ("#f", _) => (Value.Boolean false, (Value.Env env))
-      | Symbol ("#undef", _) => (Value.Undef, (Value.Env env))
+      | Symbol ("#unit", _) => (Value.Unit, (Value.Env env))
       | Symbol (s, pos) => (lookup (Value.Env env) (s, pos), (Value.Env env))
       | List ([], pos) =>
           raise Value.Value ("Cannot evaluate an empty list", pos)
@@ -111,13 +114,11 @@ struct
           (case rest of
            | [Symbol (name, _), expr'] =>
                let
-                 val cell = ref Value.Undef
-                 val env' = insert (Value.Env env) name cell
-                 val (value, _) = evaluate env' expr'
-                 val () = cell := value
-                 val env'' = insert env' name (ref value)
+                 val () = insert (Value.Env env) name Value.Unit
+                 val (value, _) = evaluate (Value.Env env) expr'
+                 val () = set (Value.Env env) name value
                in
-                 (Value.Undef, env'')
+                 (Value.Unit, (Value.Env env))
                end
            | _ => raise Value.Value ("Malformed `define`", pos))
       | List (f :: args, pos) =>

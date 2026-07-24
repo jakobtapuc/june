@@ -16,13 +16,13 @@ val _ =
 
       | SOME (exprs, _) =>
           let
-            fun evalList env [] = (Value.Undef, env)
+            fun evalList env [] = (Value.Unit, env)
               | evalList env (expr :: rest) =
                   let val (_, env') = Evaluator.evaluate env expr
                   in evalList env' rest
                   end
           in
-            evalList Env.initialEnv exprs
+            evalList Env.prim exprs
           end
   in
     ()
