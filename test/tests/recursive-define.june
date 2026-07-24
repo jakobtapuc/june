@@ -1,0 +1,9 @@
+(define x 1)
+
+(define loop
+  (lambda (n acc)
+    (if (eq? n 0)
+        acc
+        (loop (- n 1) (+ acc x)))))
+
+(show-ln (loop 1000000 0))

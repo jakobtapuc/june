@@ -13,10 +13,10 @@ sig
   | Primitive of (v list -> Token.position -> v)
   | Closure of
       {params: string list, body: Ast.ast list, env: env, pos: Token.position}
-  | Undef
+  | Unit
 
   and env =
-    Env of (string * v ref) list
+    Env of {bindings: (string, v ref) HashTable.hash_table, parent: env option}
 
   val toString: v -> string
 end
