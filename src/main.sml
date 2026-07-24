@@ -18,8 +18,11 @@ val _ =
           let
             fun evalList env [] = (Value.Unit, env)
               | evalList env (expr :: rest) =
-                  let val (_, env') = Evaluator.evaluate env expr
-                  in evalList env' rest
+                  let
+                    val expanded = Expander.expand expr
+                    val (_, env') = Evaluator.evaluate env expanded
+                  in
+                    evalList env' rest
                   end
           in
             evalList Env.prim exprs
