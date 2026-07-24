@@ -3,17 +3,17 @@ sig
   exception Value of (string * Token.position)
 
   datatype v =
-  | Integer of int
-  | Float of real
-  | String of string
-  | Boolean of bool
-  | Symbol of string
-  | Pair of v * v
-  | Nil
-  | Primitive of (v list -> Token.position -> v)
-  | Closure of
+  | VInteger of int
+  | VFloat of real
+  | VString of string
+  | VBoolean of bool
+  | VSymbol of string
+  | VPair of v * v
+  | VNil
+  | VPrimitive of (v list -> Token.position -> v)
+  | VClosure of
       {params: string list, body: Ast.ast list, env: env, pos: Token.position}
-  | Unit
+  | VUnit
 
   and env =
     Env of {bindings: (string, v ref) HashTable.hash_table, parent: env option}

@@ -3,43 +3,43 @@ struct
   exception Value of (string * Token.position)
 
   datatype v =
-  | Integer of int
-  | Float of real
-  | String of string
-  | Boolean of bool
-  | Symbol of string
-  | Pair of v * v
-  | Nil
-  | Primitive of (v list -> Token.position -> v)
-  | Closure of
+  | VInteger of int
+  | VFloat of real
+  | VString of string
+  | VBoolean of bool
+  | VSymbol of string
+  | VPair of v * v
+  | VNil
+  | VPrimitive of (v list -> Token.position -> v)
+  | VClosure of
       {params: string list, body: Ast.ast list, env: env, pos: Token.position}
-  | Unit
+  | VUnit
 
   and env =
     Env of {bindings: (string, v ref) HashTable.hash_table, parent: env option}
 
-  fun toString (Integer n) =
+  fun toString (VInteger n) =
         if n < 0 then "-" ^ (Int.toString <| Int.abs n) else Int.toString n
-    | toString (Float f) = Real.toString f
-    | toString (String s) = "\"" ^ s ^ "\""
-    | toString (Boolean true) = "#t"
-    | toString (Boolean false) = "#f"
-    | toString (Symbol s) = s
-    | toString (Pair (x, y)) = stringifyPair x y
-    | toString Nil = "#nil"
-    | toString (Primitive _) = "<primitive>"
-    | toString (Closure _) = "<closure>"
-    | toString Unit = "#unit"
+    | toString (VFloat f) = Real.toString f
+    | toString (VString s) = "\"" ^ s ^ "\""
+    | toString (VBoolean true) = "#t"
+    | toString (VBoolean false) = "#f"
+    | toString (VSymbol s) = s
+    | toString (VPair (x, y)) = stringifyPair x y
+    | toString VNil = "#nil"
+    | toString (VPrimitive _) = "<primitive>"
+    | toString (VClosure _) = "<closure>"
+    | toString VUnit = "#unit"
   and stringifyPair x y =
     let
-      fun loop (Pair (h, t)) acc =
+      fun loop (VPair (h, t)) acc =
             loop t (toString h :: acc)
-        | loop Nil acc =
+        | loop VNil acc =
             "(" ^ String.concatWith " " (List.rev acc) ^ ")"
         | loop tail acc =
             "(" ^ String.concatWith " " (List.rev acc) ^ " . " ^ toString tail
             ^ ")"
     in
-      loop (Pair (x, y)) []
+      loop (VPair (x, y)) []
     end
 end
