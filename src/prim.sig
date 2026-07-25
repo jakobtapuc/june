@@ -21,5 +21,7 @@ sig
   val cons: prim_func
   val car: prim_func
   val cdr: prim_func
-(* val read : t *)
+  (* val read : t *)
+
+  val typeOf: prim_func
 end

@@ -18,20 +18,24 @@ I do use as many `SuccessorML` features using `"allowSuccessorML true"` in the M
 Even after I'm "finished" with the base implementation
 my aim isn't to create a compliant Scheme implementation. Hence the name which isn't: Micro/Nano/Pico/Femto-Scheme.
 ## Roadmap
-### Urgent
+### Done
 - [x] Lexer + Pretty print
 - [x] Base AST + Pretty print
 - [x] Error reporting with line positions<super>1</super>
-- [x] Lists
+- [x] Lists using cons cells, including improper lists
 - [x] Arithmetic operations
 - [x] Proper quoting
 - [x] Strings
 - [x] Floats
 - [x] Displaying values
 - [x] `define` for simple bindings
-- [x] Lambdas
+- [x] Lambdas with proper lexical scoping (hash tables as frames)
 - [x] Primitive `if`
-- [ ] AST desugaring for `define`, `let`, and `cond`<super>2</super>
+- [x] AST desugaring for `let`, `cond`, `and` & `or`<super>2</super>
+- [x] Deferred computations using `lazy` and `force`
+- [x] Type objects and type disjointness
+### Working on
+- [ ] 
 
 1\. This has been my goal from the very beginning, and it's something that most of the implementations my brain has been trying to hoard didn't include.
 
@@ -57,5 +61,3 @@ my aim isn't to create a compliant Scheme implementation. Hence the name which i
 - [ ] Quasi-quotes
 ## ℹ️ Caveat
 I **do not** intend to create a full-fledged general purpose programming language here, folks. It's a toy project that'll never become big lolz.
-### Won't be implemented because I want a pretty pure language
-- [ ] Mutation (no `set!`)

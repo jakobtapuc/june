@@ -13,8 +13,8 @@ struct
   fun add xs pos =
     let
       fun unwrap (VInteger x) = x
-        | unwrap _ =
-            raise Value ("Non-integer argument supplied to `+`", pos)
+        | unwrap x =
+            failTypeWithTrace "+" (stringOf x) "integer" pos
       val unwrapped = List.map unwrap xs
       val folded = List.foldl op+ 0 unwrapped
     in
@@ -22,28 +22,27 @@ struct
     end
 
   fun sub [] pos =
-        raise Value ("`-` expects at least 1 argument, 0 given", pos)
+        failArgWithTrace "-" 0 1 pos
     | sub [VInteger x] _ =
         VInteger (~x)
     | sub (VInteger x :: rest) pos =
         let
           fun unwrap (VInteger n) = n
-            | unwrap _ =
-                raise Value ("Non-integer argument supplied to `-`", pos)
-
+            | unwrap x =
+                failTypeWithTrace "-" (stringOf x) "integer" pos
           val ns = List.map unwrap rest
           val result = List.foldl (fn (n, acc) => acc - n) x ns
         in
           VInteger result
         end
-    | sub _ pos =
-        raise Value ("Non-integer argument supplied to `-`", pos)
+    | sub args pos =
+        failTypeWithTrace "-" (stringOf <| hd args) "integer" pos
 
   fun mult xs pos =
     let
       fun unwrap (VInteger x) = x
-        | unwrap _ =
-            raise Value ("Non-integer argument supplied to `*`", pos)
+        | unwrap x =
+            failTypeWithTrace "*" (stringOf x) "integer" pos
       val unwrapped = List.map unwrap xs
       val folded = List.foldl op* 1 unwrapped
     in
@@ -53,8 +52,8 @@ struct
   fun div' xs pos =
     let
       fun unwrap (VInteger x) = x
-        | unwrap _ =
-            raise Value ("Non-integer argument supplied to `/`", pos)
+        | unwrap x =
+            failTypeWithTrace "/" (stringOf x) "integer" pos
       val unwrapped = List.map unwrap xs
       val folded = List.foldl (op div) 1 unwrapped
     in
@@ -69,6 +68,7 @@ struct
             | eq' (VSymbol x) (VSymbol y) = (x = y)
             | eq' VNil VNil = true
             | eq' VUnit VUnit = true
+            | eq' (VType t) (VType t') = (t = t')
             | eq' (VFloat x) (VFloat y) =
                 let
                   fun floatEq x' y' =
@@ -85,23 +85,25 @@ struct
                 in
                   aEqual = bEqual
                 end
+            | eq' (VPromise {objectId = id, ...})
+                (VPromise {objectId = id', ...}) =
+                (ObjectId.toString id = ObjectId.toString id')
+            | eq' (VClosure {objectId = id, ...})
+                (VClosure {objectId = id', ...}) =
+                (ObjectId.toString id = ObjectId.toString id')
             | eq' _ _ = false
         in
           VBoolean (eq' a b)
         end
-    | eq (args as _) pos =
-        raise Value
-          ( "Invalid number of arguments supplied to `eq?`. 2 expected but "
-            ^ (Int.toString (List.length args)) ^ " given."
-          , pos
-          )
+    | eq args pos =
+        failArgWithTrace "eq?" (length args) 2 pos
 
   fun not' [VBoolean x] _ =
         VBoolean (not x)
-    | not' [_] pos =
-        raise Value ("Non-boolean argument supplied to `not`", pos)
-    | not' _ pos =
-        raise Value ("Invalid number of arguments supplied to `not`", pos)
+    | not' [x] pos =
+        failTypeWithTrace "not" (stringOf x) "bool" pos
+    | not' args pos =
+        failArgWithTrace "not" (length args) 1 pos
 
   fun show xs _ =
     let
@@ -130,18 +132,22 @@ struct
         VPair (x, VPair (y, z))
     | cons [x, VNil] _ = VPair (x, VNil)
     | cons [x, y] _ = VPair (x, y)
-    | cons _ pos =
-        raise Value ("Invalid number of arguments supplied to `cons`", pos)
+    | cons args pos =
+        failArgWithTrace "cons" (length args) 2 pos
 
   fun car [VPair (x, _)] _ = x
-    | car [_] pos =
-        raise Value ("`car` expects a pair", pos)
-    | car _ pos =
-        raise Value ("Invalid number of arguments supplied to `car`", pos)
+    | car [x] pos =
+        failTypeWithTrace "car" (stringOf x) "pair" pos
+    | car args pos =
+        failArgWithTrace "car" (length args) 1 pos
 
   fun cdr [VPair (_, y)] _ = y
-    | cdr [_] pos =
-        raise Value ("`cdr` expects a pair", pos)
-    | cdr _ pos =
-        raise Value ("Invalid number of arguments supplied to `cdr`", pos)
+    | cdr [x] pos =
+        failTypeWithTrace "cdr" (stringOf x) "pair" pos
+    | cdr args pos =
+        failArgWithTrace "cdr" (length args) 1 pos
+
+  fun typeOf [x] _ = Value.typeOf x
+    | typeOf args pos =
+        failArgWithTrace "typeof" (length args) 1 pos
 end

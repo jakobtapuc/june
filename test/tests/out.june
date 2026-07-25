@@ -1,0 +1,6 @@
+(show-ln (if (begin
+              (show-ln)
+              (+ 1 23)
+              #t)
+          42
+          43))

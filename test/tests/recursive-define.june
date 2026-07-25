@@ -1,9 +1,13 @@
-(define x 1)
+(define c
+  (lambda (x)
+    (/ 10 x)))
 
-(define loop
-  (lambda (n acc)
-    (if (eq? n 0)
-        acc
-        (loop (- n 1) (+ acc x)))))
+(define b
+  (lambda (x)
+    (c (- x "a"))))
 
-(show-ln (loop 1000000 0))
+(define a
+  (lambda (x)
+    (b x)))
+
+(a 1)
