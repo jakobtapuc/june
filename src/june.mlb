@@ -7,6 +7,7 @@ in
     "allowSuccessorML true"
   in
     top-level-ops.sml
+    list-ext.sml
     token.sig
     token.sml
     lexer.sig
@@ -16,6 +17,10 @@ in
     parser-ops.sml
     parser.sig
     parser.sml
+    object-id.sig
+    object-id.sml
+    stack-trace.sig
+    stack-trace.sml
     value.sig
     value.sml
     prim.sig
