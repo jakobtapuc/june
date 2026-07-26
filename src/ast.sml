@@ -1,7 +1,7 @@
 structure Ast :> JUNE_AST =
 struct
   datatype ast =
-  | Integer of int * Token.position
+  | Integer of IntInf.int * Token.position
   | Float of real * Token.position
   | String of string * Token.position
   | Symbol of string * Token.position
@@ -14,7 +14,7 @@ struct
 
       fun toString' depth expr' =
         case expr' of
-        | Integer (n, _) => indent depth ^ "Integer(" ^ Int.toString n ^ ")"
+        | Integer (n, _) => indent depth ^ "Integer(" ^ IntInf.toString n ^ ")"
         | Float (f, _) => indent depth ^ "Float(" ^ Real.toString f ^ ")"
         | String (s, _) => indent depth ^ "String(" ^ s ^ ")"
         | Symbol (s, _) => indent depth ^ "Symbol(" ^ s ^ ")"

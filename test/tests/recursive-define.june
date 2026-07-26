@@ -1,13 +1,7 @@
-(define c
-  (lambda (x)
-    (/ 10 x)))
+(define ack
+  (lambda (m n)
+    (cond ((eq? m 0) (+ n 1))
+        ((eq? n 0) (ack (- m 1) 1))
+        (else (ack (- m 1) (ack m (- n 1)))))))
 
-(define b
-  (lambda (x)
-    (c (- x "a"))))
-
-(define a
-  (lambda (x)
-    (b x)))
-
-(a 1)
+(ack 3 12)

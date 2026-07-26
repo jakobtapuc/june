@@ -8,6 +8,17 @@ struct
   fun failWithTrace message pos =
     raise Evaluator {message, pos, trace = ! StackTrace.st}
 
+  fun quoteList [] = VNil
+    | quoteList (x :: xs) =
+        VPair (quoteValue x, quoteList xs)
+  and quoteValue ast =
+    case ast of
+    | Integer (n, _) => VInteger n
+    | Float (f, _) => VFloat f
+    | String (s, _) => VString s
+    | Symbol (s, _) => VSymbol s
+    | List (xs, _) => quoteList xs
+
   fun evaluateArgs (Env env) [] = ([], Env env)
     | evaluateArgs (Env env) (expr :: rest) =
         let
@@ -167,14 +178,4 @@ struct
         in evaluateSeq pos env' rest
         end
     | evaluateSeq pos _ [] = failWithTrace "Empty body" pos
-  and quoteList [] = VNil
-    | quoteList (x :: xs) =
-        VPair (quoteValue x, quoteList xs)
-  and quoteValue ast =
-    case ast of
-    | Integer (n, _) => VInteger n
-    | Float (f, _) => VFloat f
-    | String (s, _) => VString s
-    | Symbol (s, _) => VSymbol s
-    | List (xs, _) => quoteList xs
 end

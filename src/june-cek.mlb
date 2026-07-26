@@ -36,6 +36,6 @@ in
     file-slurper.sml
     error-reporter.sig
     error-reporter.sml
-    main.sml
+    main-cek.sml
   end
 end

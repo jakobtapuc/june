@@ -6,7 +6,7 @@ sig
   | LParen
   | RParen
   | Quote
-  | Integer of int
+  | Integer of IntInf.int
   | Float of real
   | Boolean of bool
   | Symbol of string

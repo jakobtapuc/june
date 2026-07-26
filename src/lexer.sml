@@ -38,7 +38,7 @@ struct
           let
             val literal = String.implode whole
           in
-            case Int.fromString literal of
+            case IntInf.fromString literal of
               SOME n => ({token = Integer n, pos = pos}, pos1, rest1)
             | NONE => raise Lexer ("Invalid integer literal", pos)
           end
