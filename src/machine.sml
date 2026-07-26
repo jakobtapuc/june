@@ -21,11 +21,6 @@ struct
       , env: Value.env
       , next: kont
       }
-  (* | ApplyOneArgK of
-      { f : Value.v
-      , pos : Token.position
-      , next : kont
-      } *)
   | SeqK of {exprs: Ast.ast list, env: Value.env, next: kont}
   | ForceK of {next: kont, pos: Token.position}
   | MemoizeK of {cell: Value.v option ref, next: kont}
@@ -336,7 +331,7 @@ struct
     | kontDepth (SetK {next, ...}) = 1 + kontDepth next
     | kontDepth (ForceK {next, ...}) = 1 + kontDepth next
     | kontDepth (MemoizeK {next, ...}) = 1 + kontDepth next
-
+  
   fun showControl (Expr _) = "Expr"
     | showControl (Val _) = "Val"
     | showControl (Apply _) = "Apply" *)
@@ -349,17 +344,17 @@ struct
         | Failed e => raise Fail (String.concatWith "\n" e)
         | _ => loop (step state')
 
-        (* | Running {control, kont, ...} =>
-            let
-              val depth = kontDepth kont
-              val () = print
-                ("step=" ^ Int.toString (!steps) ^ " | kont depth="
-                 ^ Int.toString depth ^ " | control=" ^ showControl control
-                 ^ "\n")
-              val () = steps := !steps + 1
-            in
-              loop (step state')
-            end *)
+    (* | Running {control, kont, ...} =>
+        let
+          val depth = kontDepth kont
+          val () = print
+            ("step=" ^ Int.toString (!steps) ^ " | kont depth="
+             ^ Int.toString depth ^ " | control=" ^ showControl control
+             ^ "\n")
+          val () = steps := !steps + 1
+        in
+          loop (step state')
+        end *)
     in
       loop state
     end
