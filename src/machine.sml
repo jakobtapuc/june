@@ -5,26 +5,26 @@ struct
   datatype control =
   | Expr of ast
   | Val of v
-  | Apply of Value.v * Value.v list * Token.position
+  | Apply of v * v list * Token.position
 
   datatype kont =
   | Done
-  | IfK of {onTrue: Ast.ast, onFalse: Ast.ast, env: Value.env, next: kont}
-  | DefineK of {name: string, pos: Token.position, env: Value.env, next: kont}
+  | IfK of {onTrue: ast, onFalse: ast, env: env, next: kont}
+  | DefineK of {name: string, pos: Token.position, env: env, next: kont}
   | ApplyFunK of
-      {args: Ast.ast list, pos: Token.position, env: Value.env, next: kont}
+      {args: ast list, pos: Token.position, env: env, next: kont}
   | ApplyArgsK of
-      { f: Value.v
+      { f: v
       , pos: Token.position
-      , evaledArgs: Value.v list
-      , restArgs: Ast.ast list
-      , env: Value.env
+      , evaledArgs: v list
+      , restArgs: ast list
+      , env: env
       , next: kont
       }
-  | SeqK of {exprs: Ast.ast list, env: Value.env, next: kont}
+  | SeqK of {exprs: ast list, env: env, next: kont}
   | ForceK of {next: kont, pos: Token.position}
-  | MemoizeK of {cell: Value.v option ref, next: kont}
-  | SetK of {name: string, env: Value.env, pos: Token.position, next: kont}
+  | MemoizeK of {cell: v option ref, next: kont}
+  | SetK of {name: string, env: env, pos: Token.position, next: kont}
 
   datatype state =
   | Running of {control: control, env: env, kont: kont}
@@ -39,24 +39,23 @@ struct
     | Done => []
     | IfK {next, ...} => "if" :: withTrace message next
     | ApplyFunK {pos, next, ...} =>
-        ("Call at: " ^ "[POS]") :: withTrace message next
+        ("Called: " ^ "[POS]") :: withTrace message next
     (* | ApplyLastArgK {pos, next, ...} =>
         ("Arg at: " ^ "[POS]") :: withTrace message next *)
     | ApplyArgsK {pos, next, ...} =>
-        ("Arg at: " ^ "[POS]") :: withTrace message next
+        ("Argument applied: " ^ "[POS]") :: withTrace message next
     | SeqK {next, ...} => "Begin" :: withTrace message next
     | DefineK {pos, next, ...} =>
-        ("Define at: " ^ "[POS]") :: withTrace message next
+        ("Defined: " ^ "[POS]") :: withTrace message next
     | SetK {pos, next, ...} => ("Set at: " ^ "[POS]") :: withTrace message next
     | ForceK {pos, next, ...} =>
-        ("Force at: " ^ "[POS]") :: withTrace message next
+        ("Forced: " ^ "[POS]") :: withTrace message next
     | MemoizeK {next, ...} => withTrace message next
-
 
   fun bindAll _ [] [] = ()
     | bindAll env (p :: ps) (a :: as') =
         (insert env p a; bindAll env ps as')
-    | bindAll _ _ _ = raise Fail "Impossible" (* FIXME: should not fail here *)
+    | bindAll _ _ _ = ()
 
   fun applyClosure {body, env = closureEnv, params, pos} args kont =
     if length params <> length args then
