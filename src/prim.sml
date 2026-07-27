@@ -10,7 +10,7 @@ struct
 
   type prim_func = v list -> Token.position -> v
 
-  fun add xs pos =
+  (* fun add xs pos =
     let
       fun unwrap (VInteger x) = x
         | unwrap x =
@@ -19,6 +19,16 @@ struct
       val folded = List.foldl op+ 0 unwrapped
     in
       VInteger folded
+    end *)
+  fun add xs pos =
+    let
+      fun sum [] acc = VInteger acc
+        | sum (VInteger n :: rest) acc =
+            sum rest (acc + n)
+        | sum (x :: _) _ =
+            failTypeWithTrace "+" (stringOf x) "integer" pos
+    in
+      sum xs 0
     end
 
   fun sub [] pos =

@@ -6,7 +6,7 @@ struct
   | LParen
   | RParen
   | Quote
-  | Integer of int
+  | Integer of IntInf.int
   | Float of real
   | Boolean of bool
   | Symbol of string
@@ -21,7 +21,7 @@ struct
         | stringifyToken RParen = "RParen"
         | stringifyToken Quote = "Quote"
         | stringifyToken (Integer i) =
-            "Integer(" ^ (Int.toString i) ^ ")"
+            "Integer(" ^ (IntInf.toString i) ^ ")"
         | stringifyToken (Float f) =
             "Float(" ^ (Real.toString f) ^ ")"
         | stringifyToken (Boolean b) =

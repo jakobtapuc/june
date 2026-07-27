@@ -17,7 +17,7 @@ struct
     }
 
   datatype v =
-  | VInteger of int
+  | VInteger of IntInf.int
   | VFloat of real
   | VString of string
   | VBoolean of bool
@@ -52,7 +52,8 @@ struct
     raise Argument {f, actual, expected, pos, trace = ! StackTrace.st}
 
   fun toString (VInteger n) =
-        if n < 0 then "-" ^ (Int.toString <| Int.abs n) else Int.toString n
+        if n < 0 then "-" ^ (IntInf.toString <| IntInf.abs n)
+        else IntInf.toString n
     | toString (VFloat f) = Real.toString f
     | toString (VString s) = "\"" ^ s ^ "\""
     | toString (VBoolean true) = "#t"

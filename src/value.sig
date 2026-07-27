@@ -17,7 +17,7 @@ sig
     }
 
   datatype v =
-  | VInteger of int
+  | VInteger of IntInf.int
   | VFloat of real
   | VString of string
   | VBoolean of bool
