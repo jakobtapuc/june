@@ -22,7 +22,7 @@ struct
           val exprs = List.map (fn (_, expr') => expr') transformed
 
           val lambda = List
-            (Symbol ("lambda", pos) :: List (names, pos) :: body, pos)
+            (Symbol ("fn", pos) :: List (names, pos) :: body, pos)
         in
           List (lambda :: exprs, pos)
         end
@@ -75,6 +75,20 @@ struct
                )) pos
         end
     | expandLetRec _ pos = failWithTrace "Malformed `letrec`" pos
+
+  fun expandDefn
+        (List
+           ( Symbol ("defn", pos) ::
+               Symbol (name, _) :: List (params, _) :: body
+           , _
+           )) _ =
+        let
+          val lambda = List
+            (Symbol ("fn", pos) :: List (params, pos) :: body, pos)
+        in
+          List ([Symbol ("def", pos), Symbol (name, pos), lambda], pos)
+        end
+    | expandDefn _ pos = failWithTrace "Malformed `defn`" pos
 
   fun expandAnd (List (Symbol ("and", pos) :: exprs, _)) _ =
         let
@@ -163,6 +177,7 @@ struct
     | List (Symbol ("let", pos) :: _, _) => expand (expandLet ast pos)
     | List (Symbol ("let*", pos) :: _, _) => expand (expandLetStar ast pos)
     | List (Symbol ("letrec", pos) :: _, _) => expand (expandLetRec ast pos)
+    | List (Symbol ("defn", pos) :: _, _) => expand (expandDefn ast pos)
     | List (Symbol ("and", pos) :: _, _) => expand (expandAnd ast pos)
     | List (Symbol ("or", pos) :: _, _) => expand (expandOr ast pos)
     | List (Symbol ("cond", pos) :: _, _) => expand (expandCond ast pos)

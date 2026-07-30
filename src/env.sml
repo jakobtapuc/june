@@ -1,11 +1,8 @@
 structure Env :> JUNE_ENV =
 struct
-  exception Unbound of {name: string, pos: Token.position, trace: StackTrace.t}
+  exception Unbound of string
 
   open Value
-
-  fun failWithTrace name pos =
-    raise Unbound {name, pos, trace = ! StackTrace.st}
 
   fun empty () =
     Env
@@ -27,7 +24,7 @@ struct
     | NONE =>
         case parent of
         | SOME parent' => lookup parent' (name, pos)
-        | NONE => failWithTrace name pos
+        | NONE => raise Unbound name
 
   fun insert (Env {bindings, ...}) name value =
     HashTable.insert bindings (name, ref value)
@@ -38,7 +35,7 @@ struct
     | NONE =>
         case parent of
         | SOME parent' => set parent' (name, pos) value
-        | NONE => failWithTrace name pos
+        | NONE => raise Unbound name
 
   val prim =
     let

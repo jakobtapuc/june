@@ -1,20 +1,8 @@
 structure Value :> JUNE_VALUE =
 struct
-  exception Type of
-    { f: string
-    , actual: string
-    , expected: string
-    , pos: Token.position
-    , trace: StackTrace.t
-    }
-
-  exception Argument of
-    { f: string
-    , actual: int
-    , expected: int
-    , pos: Token.position
-    , trace: StackTrace.t
-    }
+  datatype error =
+  | Type of {f: string, actual: string, expected: string}
+  | Arity of {f: string, actual: int, expected: int}
 
   datatype v =
   | VInteger of IntInf.int
@@ -24,32 +12,21 @@ struct
   | VSymbol of string
   | VPair of v * v
   | VNil
-  | VPrimitive of (v list -> Token.position -> v)
+  | VPrimitive of (v list -> (v, error) Result.r)
   | VClosure of
       { objectId: ObjectId.t
+      , name: string option ref
       , params: string list
       , body: Ast.ast list
       , env: env
-      , pos: Token.position
       }
   | VPromise of
-      { objectId: ObjectId.t
-      , body: Ast.ast
-      , env: env
-      , value: v option ref
-      , pos: Token.position
-      }
+      {objectId: ObjectId.t, body: Ast.ast, env: env, value: v option ref}
   | VUnit
   | VType of string
 
   and env =
     Env of {bindings: (string, v ref) HashTable.hash_table, parent: env option}
-
-  fun failTypeWithTrace f actual expected pos =
-    raise Type {f, actual, expected, pos, trace = ! StackTrace.st}
-
-  fun failArgWithTrace f actual expected pos =
-    raise Argument {f, actual, expected, pos, trace = ! StackTrace.st}
 
   fun toString (VInteger n) =
         if n < 0 then "-" ^ (IntInf.toString <| IntInf.abs n)

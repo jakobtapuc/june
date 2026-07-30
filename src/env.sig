@@ -1,6 +1,6 @@
 signature JUNE_ENV =
 sig
-  exception Unbound of {name: string, pos: Token.position, trace: StackTrace.t}
+  exception Unbound of string
 
   val empty: unit -> Value.env
 

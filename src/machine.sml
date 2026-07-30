@@ -3,22 +3,23 @@ struct
   open Ast Value Env
 
   datatype control =
-  | Expr of ast
+  | Expr of {expr: ast, isTail: bool}
   | Val of v
-  | Apply of v * v list * Token.position
+  | Apply of {f: v, args: v list, pos: Token.position, isTail: bool}
 
   datatype kont =
   | Done
-  | IfK of {onTrue: ast, onFalse: ast, env: env, next: kont}
+  | IfK of {onTrue: ast, onFalse: ast, env: env, isTail: bool, next: kont}
   | DefineK of {name: string, pos: Token.position, env: env, next: kont}
   | ApplyFunK of
-      {args: ast list, pos: Token.position, env: env, next: kont}
+      {args: ast list, pos: Token.position, env: env, isTail: bool, next: kont}
   | ApplyArgsK of
       { f: v
       , pos: Token.position
       , evaledArgs: v list
       , restArgs: ast list
       , env: env
+      , isTail: bool
       , next: kont
       }
   | SeqK of {exprs: ast list, env: env, next: kont}
@@ -26,76 +27,127 @@ struct
   | MemoizeK of {cell: v option ref, next: kont}
   | SetK of {name: string, env: env, pos: Token.position, next: kont}
 
+  datatype frame =
+  | CallFrame of {proc: v option, call: Token.position}
+  | DefineFrame of {name: string, pos: Token.position}
+
+  type trace = frame list
+
+  datatype runtime_error =
+  | TypeError of
+      {proc: string, pos: Token.position, expected: string, actual: string}
+  | ArityError of
+      {proc: string option, pos: Token.position, expected: int, actual: int}
+  | GenericError of string
+
   datatype state =
-  | Running of {control: control, env: env, kont: kont}
-  | Failed of string list
+  | Running of {control: control, env: Value.env, kont: kont, trace: trace}
+  | Failed of {error: runtime_error, trace: trace}
+
+  exception Machine of runtime_error * trace
 
   val continueWith = Running
 
-  val fail = Failed
+  fun fail error trace = Failed {error, trace}
 
-  fun withTrace message kont =
+  (* fun withTrace kont =
     case kont of
     | Done => []
-    | IfK {next, ...} => "if" :: withTrace message next
+    | IfK {next, ...} => withTrace next
+    | SeqK {next, ...} => withTrace next
+    | MemoizeK {next, ...} => withTrace next
+    | SetK {next, ...} => withTrace next
+    | ForceK {next, ...} => withTrace next
+    | ApplyArgsK {next, ...} => withTrace next
+    | DefineK {name, pos, next, ...} =>
+        DefineFrame {name, pos} :: withTrace next
     | ApplyFunK {pos, next, ...} =>
-        ("Called: " ^ "[POS]") :: withTrace message next
-    (* | ApplyLastArgK {pos, next, ...} =>
-        ("Arg at: " ^ "[POS]") :: withTrace message next *)
-    | ApplyArgsK {pos, next, ...} =>
-        ("Argument applied: " ^ "[POS]") :: withTrace message next
-    | SeqK {next, ...} => "Begin" :: withTrace message next
-    | DefineK {pos, next, ...} =>
-        ("Defined: " ^ "[POS]") :: withTrace message next
-    | SetK {pos, next, ...} => ("Set at: " ^ "[POS]") :: withTrace message next
-    | ForceK {pos, next, ...} =>
-        ("Forced: " ^ "[POS]") :: withTrace message next
-    | MemoizeK {next, ...} => withTrace message next
+        CallFrame {proc = NONE, call = pos} :: withTrace next *)
+
+  fun catchEnv trace thunk =
+    (thunk ())
+    handle Unbound name =>
+      fail (GenericError ("Unbound variable: " ^ name)) trace
 
   fun bindAll _ [] [] = ()
     | bindAll env (p :: ps) (a :: as') =
         (insert env p a; bindAll env ps as')
     | bindAll _ _ _ = ()
 
-  fun applyClosure {body, env = closureEnv, params, pos} args kont =
-    if length params <> length args then
-      fail <| withTrace "Argument count mismatch" kont
-    else
-      let
-        val env' = extend closureEnv
+  fun applyClosure (c as VClosure {body, env = closureEnv, params, name, ...})
+        args pos isTail kont trace =
+        if length params <> length args then
+          fail
+            (ArityError
+               { proc = !name
+               , expected = length params
+               , pos
+               , actual = length args
+               }) trace
+        else
+          let
+            val env' = extend closureEnv
 
-        val () = bindAll env' params args
-      in
-        case body of
-        | [] => fail <| withTrace "Empty lambda body" kont
-        | [expr] => Running {control = Expr expr, env = env', kont}
-        | expr :: exprs =>
-            Running
-              { control = Expr expr
-              , env = env'
-              , kont = SeqK {exprs, env = env', next = kont}
-              }
-      end
+            val () = bindAll env' params args
 
-  fun apply f pos args env kont =
+            val trace' =
+              if isTail then
+                case trace of
+                | CallFrame _ :: rest => rest
+                | _ => trace
+              else
+                trace
+
+            val trace'' = CallFrame {proc = SOME c, call = pos} :: trace'
+          in
+            case body of
+            | [] => fail (GenericError "Empty lambda body") trace
+            | [expr] =>
+                Running
+                  { control = Expr {expr, isTail = true}
+                  , env = env'
+                  , kont
+                  , trace = trace''
+                  }
+            | expr :: exprs =>
+                Running
+                  { control = Expr {expr, isTail = false}
+                  , env = env'
+                  , kont = SeqK {exprs, env = env', next = kont}
+                  , trace = trace''
+                  }
+          end
+    | applyClosure _ _ _ _ _ trace =
+        fail (GenericError "Trying to apply a non-closure value") trace
+
+  fun apply f args pos isTail env kont trace =
     case f of
       VPrimitive f' =>
-        Running {control = Val (f' args pos), env = env, kont = kont}
+        (case f' args of
+         | Result.Ok x => Running {control = Val x, env, kont, trace}
+         | Result.Err (Value.Type {f = f'', actual, expected}) =>
+             fail (TypeError {proc = f'', pos, actual, expected}) trace
+         | Result.Err (Value.Arity {f = f'', actual, expected}) =>
+             fail (ArityError {proc = SOME f'', pos, actual, expected}) trace)
+    | VClosure c => applyClosure (VClosure c) args pos isTail kont trace
+    | _ => fail (GenericError "Trying to apply a non-procedure value") trace
 
-    | VClosure {body, env = env', params, pos = pos', ...} =>
-        applyClosure {body, env = env', params, pos = pos'} args kont
-
-    | _ => fail <| withTrace "Trying to apply a non-procedure value" kont
-
-  fun evalFirstArg f pos [] env kont =
-        Running {control = Apply (f, [], pos), env, kont}
-
-    | evalFirstArg f pos (arg :: args) env kont =
+  fun evalFirstArg f pos [] env isTail kont trace =
+        Running {control = Apply {f, args = [], pos, isTail}, env, kont, trace}
+    | evalFirstArg f pos (arg :: args) env isTail kont trace =
         Running
-          { control = Expr arg
+          { control = Expr {expr = arg, isTail = false}
           , env
           , kont = ApplyArgsK
-              {f, pos, evaledArgs = [], restArgs = args, env, next = kont}
+              { f
+              , pos
+              , evaledArgs = []
+              , restArgs = args
+              , env
+              , isTail
+              , next = kont
+              }
+          , trace
           }
 
   fun quoteList [] = VNil
@@ -111,30 +163,42 @@ struct
 
   fun step state =
     case state of
-    | Running {control = Expr (Integer (n, _)), env, kont} =>
-        continueWith {control = Val <| VInteger n, env, kont}
-    | Running {control = Expr (Float (n, _)), env, kont} =>
-        continueWith {control = Val <| VFloat n, env, kont}
-    | Running {control = Expr (String (s, _)), env, kont} =>
-        continueWith {control = Val <| VString s, env, kont}
-    | Running {control = Expr (Symbol ("#t", _)), env, kont} =>
-        continueWith {control = Val (VBoolean true), env, kont}
-    | Running {control = Expr (Symbol ("#f", _)), env, kont} =>
-        continueWith {control = Val (VBoolean false), env, kont}
-    | Running {control = Expr (Symbol ("#unit", _)), env, kont} =>
-        continueWith {control = Val VUnit, env, kont}
-    | Running {control = Expr (Symbol (s, pos)), env, kont} =>
-        continueWith {control = Val (lookup env (s, pos)), env, kont}
-    | Running {control = Expr (List ([], _)), kont, ...} =>
-        fail <| withTrace "Cannot evaluate an empty expression" kont
+    | Running {control = Expr {expr = (Integer (n, _)), ...}, env, kont, trace} =>
+        continueWith {control = Val <| VInteger n, env, kont, trace}
+    | Running {control = Expr {expr = (Float (n, _)), ...}, env, kont, trace} =>
+        continueWith {control = Val <| VFloat n, env, kont, trace}
+    | Running {control = Expr {expr = (String (s, _)), ...}, env, kont, trace} =>
+        continueWith {control = Val <| VString s, env, kont, trace}
     | Running
-        {control = Expr (List (Symbol ("quote", _) :: [quoted], _)), env, kont} =>
-        continueWith {control = Val (quoteValue quoted), env, kont}
+        {control = Expr {expr = (Symbol ("#t", _)), ...}, env, kont, trace} =>
+        continueWith {control = Val (VBoolean true), env, kont, trace}
+    | Running
+        {control = Expr {expr = (Symbol ("#f", _)), ...}, env, kont, trace} =>
+        continueWith {control = Val (VBoolean false), env, kont, trace}
+    | Running
+        {control = Expr {expr = (Symbol ("#unit", _)), ...}, env, kont, trace} =>
+        continueWith {control = Val VUnit, env, kont, trace}
+    | Running {control = Expr {expr = (Symbol (s, pos)), ...}, env, kont, trace} =>
+        catchEnv trace (fn () =>
+          continueWith {control = Val (lookup env (s, pos)), env, kont, trace})
+    | Running {control = Expr {expr = (List ([], _)), ...}, trace, ...} =>
+        fail (GenericError "Cannot evaluate an empty expression") trace
     | Running
         { control =
-            Expr (List (Symbol ("lambda", pos) :: List (params, _) :: body, _))
+            Expr {expr = (List (Symbol ("quote", _) :: [quoted], _)), ...}
         , env
         , kont
+        , trace
+        } => continueWith {control = Val (quoteValue quoted), env, kont, trace}
+    | Running
+        { control =
+            Expr
+              { expr = (List (Symbol ("fn", _) :: List (params, _) :: body, _))
+              , ...
+              }
+        , env
+        , kont
+        , trace
         } =>
         let
           fun paramNames [] = SOME []
@@ -143,71 +207,143 @@ struct
             | paramNames _ = NONE
         in
           if null body then
-            fail <| withTrace "Lambda needs a body" kont
+            fail (GenericError "Lambda needs a body") trace
           else
             case paramNames params of
             | SOME names =>
                 continueWith
                   { control = Val (VClosure
                       { objectId = ObjectId.newId ()
+                      , name = ref NONE
                       , params = names
-                      , body = body
-                      , env = env
-                      , pos = pos
+                      , body
+                      , env
                       })
                   , env
                   , kont
+                  , trace
                   }
-            | NONE => fail <| withTrace "Param name has to be a symbol" kont
+            | NONE => fail (GenericError "Param name has to be a symbol") trace
         end
-    | Running {control = Expr (List (Symbol ("if", _) :: rest, _)), env, kont} =>
+    | Running
+        { control =
+            Expr {expr = (List (Symbol ("if", _) :: rest, _)), isTail = false}
+        , env
+        , kont
+        , trace
+        } =>
         (case rest of
          | [cond, onTrue, onFalse] =>
              continueWith
-               { control = Expr cond
+               { control = Expr {expr = cond, isTail = false}
                , env
-               , kont = IfK {onTrue, onFalse, env, next = kont}
+               , kont = IfK {onTrue, onFalse, env, isTail = false, next = kont}
+               , trace
                }
-         | _ => fail <| withTrace "Malformed if" kont)
+         | _ => fail (GenericError "Malformed if") trace)
+    | Running
+        { control =
+            Expr {expr = (List (Symbol ("if", _) :: rest, _)), isTail = true}
+        , env
+        , kont
+        , trace
+        } =>
+        (case rest of
+         | [cond, onTrue, onFalse] =>
+             continueWith
+               { control = Expr {expr = cond, isTail = true}
+               , env
+               , kont = IfK {onTrue, onFalse, env, isTail = true, next = kont}
+               , trace
+               }
+         | _ => fail (GenericError "Malformed if") trace)
     | Running
         { control = Val (VBoolean true)
-        , kont = IfK {onTrue, env = ifEnv, next, ...}
-        , ...
-        } => Running {control = Expr onTrue, env = ifEnv, kont = next}
-
-    | Running
-        { control = Val (VBoolean false)
-        , kont = IfK {onFalse, env = ifEnv, next, ...}
-        , ...
-        } => Running {control = Expr onFalse, env = ifEnv, kont = next}
-    | Running
-        {control = Expr (List (Symbol ("begin", _) :: exprs, _)), env, kont} =>
-        (case exprs of
-         | [] => fail <| withTrace "Empty `begin` body" kont
-         | [expr] => Running {control = Expr expr, env, kont}
-         | expr :: rest =>
-             Running
-               { control = Expr expr
-               , env
-               , kont = SeqK {exprs = rest, env, next = kont}
-               })
-    | Running {control = Val value, env, kont = SeqK {exprs = [], next, ...}} =>
-        Running {control = Val value, env, kont = next}
-    | Running
-        {control = Val _, kont = SeqK {exprs = [expr], env = seqEnv, next}, ...} =>
-        Running {control = Expr expr, env = seqEnv, kont = next}
-    | Running
-        { control = Val _
-        , kont = SeqK {exprs = nextExpr :: rest, env = seqEnv, next}
+        , kont = IfK {onTrue, env = ifEnv, isTail, next, ...}
+        , trace
         , ...
         } =>
         Running
-          { control = Expr nextExpr
-          , env = seqEnv
-          , kont = SeqK {exprs = rest, env = seqEnv, next = next}
+          { control = Expr {expr = onTrue, isTail}
+          , env = ifEnv
+          , kont = next
+          , trace
+          }
+
+    | Running
+        { control = Val (VBoolean false)
+        , kont = IfK {onFalse, env = ifEnv, isTail, next, ...}
+        , trace
+        , ...
+        } =>
+        Running
+          { control = Expr {expr = onFalse, isTail}
+          , env = ifEnv
+          , kont = next
+          , trace
           }
     | Running
-        {control = Expr (List (Symbol ("lazy", pos) :: [thunk], _)), env, kont} =>
+        { control = Expr {expr = (List (Symbol ("begin", _) :: exprs, _)), ...}
+        , env
+        , kont
+        , trace
+        } =>
+        (case exprs of
+         | [] => fail (GenericError "Empty `begin` body") trace
+         | [expr] =>
+             Running {control = Expr {expr, isTail = true}, env, kont, trace}
+         | expr :: rest =>
+             Running
+               { control = Expr {expr, isTail = false}
+               , env
+               , kont = SeqK {exprs = rest, env, next = kont}
+               , trace
+               })
+    | Running
+        { control = Expr {expr = (List (f :: args, pos)), isTail = true}
+        , env
+        , kont
+        , trace
+        } =>
+        Running
+          { control = Expr {expr = f, isTail = true}
+          , env
+          , kont = ApplyFunK {args, pos, env, isTail = true, next = kont}
+          , trace
+          }
+    | Running
+        {control = Val value, env, kont = SeqK {exprs = [], next, ...}, trace} =>
+        Running {control = Val value, env, kont = next, trace}
+    | Running
+        { control = Val _
+        , kont = SeqK {exprs = [expr], env = seqEnv, next}
+        , trace
+        , ...
+        } =>
+        Running
+          { control = Expr {expr, isTail = true}
+          , env = seqEnv
+          , kont = next
+          , trace
+          }
+    | Running
+        { control = Val _
+        , kont = SeqK {exprs = nextExpr :: rest, env = seqEnv, next}
+        , trace
+        , ...
+        } =>
+        Running
+          { control = Expr {expr = nextExpr, isTail = false}
+          , env = seqEnv
+          , kont = SeqK {exprs = rest, env = seqEnv, next = next}
+          , trace
+          }
+    | Running
+        { control = Expr {expr = (List (Symbol ("lazy", _) :: [thunk], _)), ...}
+        , env
+        , kont
+        , trace
+        } =>
         Running
           { control =
               Val
@@ -217,111 +353,170 @@ struct
                 , body = thunk
                 , env
                 , value = ref NONE
-                , pos
                 }
           , env
           , kont
+          , trace
           }
     | Running
-        {control = Expr (List (Symbol ("force", pos) :: [expr], _)), env, kont} =>
-        Running {control = Expr expr, env, kont = ForceK {next = kont, pos}}
-    | Running {control = Val value, env, kont = ForceK {next, pos}} =>
+        { control =
+            Expr {expr = (List (Symbol ("force", pos) :: [expr], _)), ...}
+        , env
+        , kont
+        , trace
+        } =>
+        Running
+          { control = Expr {expr, isTail = false}
+          , env
+          , kont = ForceK {next = kont, pos}
+          , trace
+          }
+    | Running {control = Val value, env, kont = ForceK {next, pos}, trace} =>
         (case value of
          | VPromise {body, env = promiseEnv, value = cell, ...} =>
              (case !cell of
               | SOME result =>
-                  Running {control = Val result, env, kont = ForceK {next, pos}}
+                  Running
+                    { control = Val result
+                    , env
+                    , kont = ForceK {next, pos}
+                    , trace
+                    }
               | NONE =>
                   Running
-                    { control = Expr body
+                    { control = Expr {expr = body, isTail = false}
                     , env = promiseEnv
                     , kont = MemoizeK {cell, next}
+                    , trace
                     })
-         | _ =>
-             fail
-             <|
-             withTrace "Cannot force a non-promise value" (ForceK {next, pos}))
+         | _ => fail (GenericError "Cannot force a non-promise value") trace)
     | Running
-        {control = Expr (List (Symbol ("define", pos) :: rest, _)), env, kont} =>
+        { control = Expr {expr = (List (Symbol ("def", pos) :: rest, _)), ...}
+        , env
+        , kont
+        , trace
+        } =>
         (case rest of
          | [Symbol (name, _), expr'] =>
              let
                val () = insert env name VUnit
              in
                continueWith
-                 { control = Expr expr'
+                 { control = Expr {expr = expr', isTail = false}
                  , env
                  , kont = DefineK {name, pos, env, next = kont}
+                 , trace
                  }
              end
-         | _ => fail <| withTrace "Malformed `define`" kont)
+         | _ => fail (GenericError "Malformed `def`") trace)
     | Running
         { control = Val value
         , kont = DefineK {name, pos, env = defineEnv, next}
+        , trace
         , ...
         } =>
-        let val () = set defineEnv (name, pos) value
-        in continueWith {control = Val VUnit, env = defineEnv, kont = next}
-        end
+        catchEnv trace (fn () =>
+          let
+            val () =
+              case value of
+              | VClosure {name = name', ...} => name' := SOME name
+              | _ => ()
+            val () = set defineEnv (name, pos) value
+            val trace' = DefineFrame {name, pos} :: trace
+          in
+            continueWith
+              { control = Val VUnit
+              , env = defineEnv
+              , kont = next
+              , trace = trace'
+              }
+          end)
     | Running
-        {control = Expr (List (Symbol ("set!", pos) :: rest, _)), env, kont} =>
+        { control =
+            Expr
+              {expr = (List (Symbol ("set!", pos) :: rest, _)), isTail = false}
+        , env
+        , kont
+        , trace
+        } =>
         (case rest of
          | [Symbol (name, _), expr] =>
              Running
-               { control = Expr expr
+               { control = Expr {expr, isTail = false}
                , env
                , kont = SetK {name, env, pos, next = kont}
+               , trace
                }
-         | _ => fail <| withTrace "Malformed `set!`" kont)
+         | _ => fail (GenericError "Malformed `set!`") trace)
     | Running
-        {control = Val value, env, kont = SetK {name, env = setEnv, next, pos}} =>
-        let val () = set setEnv (name, pos) value
-        in Running {control = Val VUnit, env, kont = next}
-        end
-    | Running {control = Expr (List (f :: args, pos)), env, kont} =>
+        { control = Val value
+        , env
+        , kont = SetK {name, env = setEnv, next, pos}
+        , trace
+        } =>
+        catchEnv trace (fn () =>
+          let val () = set setEnv (name, pos) value
+          in Running {control = Val VUnit, env, kont = next, trace}
+          end)
+    | Running
+        { control = Expr {expr = (List (f :: args, pos)), isTail = false}
+        , env
+        , kont
+        , trace
+        } =>
         Running
-          { control = Expr f
+          { control = Expr {expr = f, isTail = false}
           , env
-          , kont = ApplyFunK {args, pos, env, next = kont}
+          , kont = ApplyFunK {args, pos, env, isTail = false, next = kont}
+          , trace
           }
-    | Running {control = Apply (f, args, pos), env, kont} =>
-        apply f pos args env kont
     | Running
         { control = Val f
-        , kont = ApplyFunK {args, pos, env = callEnv, next}
+        , kont = ApplyFunK {args, pos, env = callEnv, isTail, next, ...}
+        , trace
         , ...
-        } => evalFirstArg f pos args callEnv next
+        } => evalFirstArg f pos args callEnv isTail next trace
+    | Running {control = Apply {f, args, pos, isTail}, env, kont, trace} =>
+        apply f args pos isTail env kont trace
     | Running
         { control = Val arg
         , kont =
             ApplyArgsK
-              {f, pos, evaledArgs, restArgs = nextArg :: rest, env, next}
+              { f
+              , pos
+              , evaledArgs
+              , restArgs = nextArg :: rest
+              , env
+              , isTail
+              , next
+              }
+        , trace
         , ...
         } =>
         Running
-          { control = Expr nextArg
+          { control = Expr {expr = nextArg, isTail}
           , env = env
           , kont = ApplyArgsK
-              { f = f
-              , pos = pos
+              { f
+              , pos
               , evaledArgs = arg :: evaledArgs
               , restArgs = rest
-              , env = env
-              , next = next
+              , env
+              , isTail
+              , next
               }
+          , trace
           }
     | Running
         { control = Val arg
-        , kont = ApplyArgsK {f, pos, evaledArgs, restArgs = [], env, next}
+        , kont =
+            ApplyArgsK {f, evaledArgs, restArgs = [], env, isTail, next, pos}
+        , trace
         , ...
-        } => apply f pos (List.rev (arg :: evaledArgs)) env next
-    | _ => raise Fail "Unimplemented"
+        } => apply f (List.rev (arg :: evaledArgs)) pos isTail env next trace
+    | _ => fail (GenericError "Unimplemented") []
 
-
-  (* val steps = ref 0
-  val maxKont = ref 0 *)
-
-  (* fun kontDepth Done = 0
+  fun kontDepth Done = 0
     | kontDepth (IfK {next, ...}) = 1 + kontDepth next
     | kontDepth (ApplyFunK {next, ...}) = 1 + kontDepth next
     | kontDepth (ApplyArgsK {next, ...}) = 1 + kontDepth next
@@ -330,30 +525,30 @@ struct
     | kontDepth (SetK {next, ...}) = 1 + kontDepth next
     | kontDepth (ForceK {next, ...}) = 1 + kontDepth next
     | kontDepth (MemoizeK {next, ...}) = 1 + kontDepth next
-  
+
   fun showControl (Expr _) = "Expr"
     | showControl (Val _) = "Val"
-    | showControl (Apply _) = "Apply" *)
+    | showControl (Apply _) = "Apply"
 
   fun run state =
     let
       fun loop state' =
         case state' of
-        | Running {control = Val v, env, kont = Done} => (v, env)
-        | Failed e => raise Fail (String.concatWith "\n" e)
-        | _ => loop (step state')
+        | Running {control = Val v, env, kont = Done, ...} => Result.Ok (v, env)
+        | Failed {error, trace} => Result.Err (error, trace)
 
-    (* | Running {control, kont, ...} =>
-        let
-          val depth = kontDepth kont
-          val () = print
-            ("step=" ^ Int.toString (!steps) ^ " | kont depth="
-             ^ Int.toString depth ^ " | control=" ^ showControl control
-             ^ "\n")
-          val () = steps := !steps + 1
-        in
-          loop (step state')
-        end *)
+        | _ =>
+            (* let *)
+            (* val depth = kontDepth kont *)
+            (* val () = print
+              ("step=" ^ Int.toString (!steps) ^ " | kont depth="
+               ^ Int.toString depth ^ " | control=" ^ showControl control
+               ^ "\n")
+            val () = steps := !steps + 1 *)
+            (* in *)
+            loop (step state')
+    (* end *)
+    (* | _ => loop (step state') *)
     in
       loop state
     end

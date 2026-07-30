@@ -1,76 +1,66 @@
 structure Prim :> JUNE_PRIM =
 struct
-  open Value
+  open Value Result
 
-  type v = Value.v
+  type prim_func = Value.v list -> (Value.v, error) r
 
-  type pos = Token.position
+  fun typeError f actual expected = Err <| Type {f, actual, expected}
 
-  type prim_func = v list -> pos -> v
+  fun arityError f actual expected = Err <| Arity {f, actual, expected}
 
-  type prim_func = v list -> Token.position -> v
-
-  (* fun add xs pos =
-    let
-      fun unwrap (VInteger x) = x
-        | unwrap x =
-            failTypeWithTrace "+" (stringOf x) "integer" pos
-      val unwrapped = List.map unwrap xs
-      val folded = List.foldl op+ 0 unwrapped
-    in
-      VInteger folded
-    end *)
-  fun add xs pos =
-    let
-      fun sum [] acc = VInteger acc
-        | sum (VInteger n :: rest) acc =
-            sum rest (acc + n)
-        | sum (x :: _) _ =
-            failTypeWithTrace "+" (stringOf x) "integer" pos
-    in
-      sum xs 0
-    end
-
-  fun sub [] pos =
-        failArgWithTrace "-" 0 1 pos
-    | sub [VInteger x] _ =
-        VInteger (~x)
-    | sub (VInteger x :: rest) pos =
+  fun add [] =
+        arityError "+" 0 1
+    | add xs =
         let
-          fun unwrap (VInteger n) = n
-            | unwrap x =
-                failTypeWithTrace "-" (stringOf x) "integer" pos
-          val ns = List.map unwrap rest
-          val result = List.foldl (fn (n, acc) => acc - n) x ns
+          fun add' [] acc = Ok <| VInteger acc
+            | add' (VInteger n :: rest) acc =
+                add' rest (acc + n)
+            | add' (x :: _) _ =
+                typeError "+" (stringOf x) "integer"
         in
-          VInteger result
+          add' xs 0
         end
-    | sub args pos =
-        failTypeWithTrace "-" (stringOf <| hd args) "integer" pos
 
-  fun mult xs pos =
-    let
-      fun unwrap (VInteger x) = x
-        | unwrap x =
-            failTypeWithTrace "*" (stringOf x) "integer" pos
-      val unwrapped = List.map unwrap xs
-      val folded = List.foldl op* 1 unwrapped
-    in
-      VInteger folded
-    end
+  fun sub [VInteger x] =
+        Ok <| VInteger (~x)
+    | sub xs =
+        let
+          fun sub' [] acc = Ok <| VInteger acc
+            | sub' (VInteger n :: rest) acc =
+                sub' rest (acc - n)
+            | sub' (x :: _) _ =
+                typeError "-" (stringOf x) "integer"
+        in
+          sub' xs 0
+        end
 
-  fun div' xs pos =
-    let
-      fun unwrap (VInteger x) = x
-        | unwrap x =
-            failTypeWithTrace "/" (stringOf x) "integer" pos
-      val unwrapped = List.map unwrap xs
-      val folded = List.foldl (op div) 1 unwrapped
-    in
-      VInteger folded
-    end
+  fun mult [] =
+        arityError "+" 0 1
+    | mult xs =
+        let
+          fun mult' [] acc = Ok <| VInteger acc
+            | mult' (VInteger n :: rest) acc =
+                mult' rest (acc * n)
+            | mult' (x :: _) _ =
+                typeError "-" (stringOf x) "integer"
+        in
+          mult' xs 1
+        end
 
-  fun eq [a, b] _ =
+  fun div' [] =
+        arityError "+" 0 1
+    | div' xs =
+        let
+          fun div'' [] acc = Ok <| VInteger acc
+            | div'' (VInteger n :: rest) acc =
+                div'' rest (acc div n)
+            | div'' (x :: _) _ =
+                typeError "-" (stringOf x) "integer"
+        in
+          div'' xs 1
+        end
+
+  fun eq [a, b] =
         let
           fun eq' (VInteger x) (VInteger y) = (x = y)
             | eq' (VString x) (VString y) = (x = y)
@@ -103,19 +93,19 @@ struct
                 (ObjectId.toString id = ObjectId.toString id')
             | eq' _ _ = false
         in
-          VBoolean (eq' a b)
+          Ok <| VBoolean (eq' a b)
         end
-    | eq args pos =
-        failArgWithTrace "eq?" (length args) 2 pos
+    | eq args =
+        arityError "eq?" (length args) 2
 
-  fun not' [VBoolean x] _ =
-        VBoolean (not x)
-    | not' [x] pos =
-        failTypeWithTrace "not" (stringOf x) "bool" pos
-    | not' args pos =
-        failArgWithTrace "not" (length args) 1 pos
+  fun not' [VBoolean x] =
+        Ok <| VBoolean (not x)
+    | not' [x] =
+        typeError "not" (stringOf x) "bool"
+    | not' args =
+        arityError "not" (length args) 1
 
-  fun show xs _ =
+  fun show xs =
     let
       fun unwrap (VString s) = s
         | unwrap v = toString v
@@ -124,40 +114,42 @@ struct
 
       val () = print folded
     in
-      VUnit
+      Ok VUnit
     end
 
-  fun showLn x pos =
+  fun showLn x =
     let
-      val () = ignore (show x pos)
+      val () = ignore (show x)
       val () = print "\n"
     in
-      VUnit
+      Ok VUnit
     end
 
-  fun list' xs _ =
-    List.foldr (fn (x, acc) => VPair (x, acc)) VNil xs
+  fun list' xs =
+    Ok <| List.foldr (fn (x, acc) => VPair (x, acc)) VNil xs
 
-  fun cons [x, VPair (y, z)] _ =
-        VPair (x, VPair (y, z))
-    | cons [x, VNil] _ = VPair (x, VNil)
-    | cons [x, y] _ = VPair (x, y)
-    | cons args pos =
-        failArgWithTrace "cons" (length args) 2 pos
+  fun cons [x, VPair (y, z)] =
+        Ok <| VPair (x, VPair (y, z))
+    | cons [x, VNil] =
+        Ok <| VPair (x, VNil)
+    | cons [x, y] =
+        Ok <| VPair (x, y)
+    | cons args =
+        arityError "cons" (length args) 2
 
-  fun car [VPair (x, _)] _ = x
-    | car [x] pos =
-        failTypeWithTrace "car" (stringOf x) "pair" pos
-    | car args pos =
-        failArgWithTrace "car" (length args) 1 pos
+  fun car [VPair (x, _)] = Ok x
+    | car [x] =
+        typeError "car" (stringOf x) "pair"
+    | car args =
+        arityError "car" (length args) 1
 
-  fun cdr [VPair (_, y)] _ = y
-    | cdr [x] pos =
-        failTypeWithTrace "cdr" (stringOf x) "pair" pos
-    | cdr args pos =
-        failArgWithTrace "cdr" (length args) 1 pos
+  fun cdr [VPair (_, y)] = Ok y
+    | cdr [x] =
+        typeError "cdr" (stringOf x) "pair"
+    | cdr args =
+        arityError "cdr" (length args) 1
 
-  fun typeOf [x] _ = Value.typeOf x
-    | typeOf args pos =
-        failArgWithTrace "typeof" (length args) 1 pos
+  fun typeOf [x] = Ok <| Value.typeOf x
+    | typeOf args =
+        arityError "typeof" (length args) 1
 end

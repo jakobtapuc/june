@@ -5,6 +5,8 @@ sig
   datatype token =
   | LParen
   | RParen
+  | LBracket
+  | RBracket
   | Quote
   | Integer of IntInf.int
   | Float of real

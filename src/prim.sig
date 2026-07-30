@@ -1,10 +1,9 @@
 signature JUNE_PRIM =
 sig
-  type v = Value.v
+  type prim_func = Value.v list -> (Value.v, Value.error) Result.r
 
-  type pos = Token.position
-
-  type prim_func = v list -> pos -> v
+  val typeError: string -> string -> string -> ('a, Value.error) Result.r
+  val arityError: string -> int -> int -> ('a, Value.error) Result.r
 
   val add: prim_func
   val sub: prim_func

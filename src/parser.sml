@@ -47,9 +47,9 @@ struct
 
   val eof = token isEof
 
-  val lparen = token (fn Token.LParen => true | _ => false)
+  val lparen = token (fn Token.LParen | Token.LBracket => true | _ => false)
 
-  val rparen = token (fn Token.RParen => true | _ => false)
+  val rparen = token (fn Token.RParen | Token.RBracket => true | _ => false)
 
   val integer =
     map

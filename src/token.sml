@@ -5,6 +5,8 @@ struct
   datatype token =
   | LParen
   | RParen
+  | LBracket
+  | RBracket
   | Quote
   | Integer of IntInf.int
   | Float of real
@@ -19,6 +21,8 @@ struct
     let
       fun stringifyToken LParen = "LParen"
         | stringifyToken RParen = "RParen"
+        | stringifyToken LBracket = "LBracket"
+        | stringifyToken RBracket = "RBracket"
         | stringifyToken Quote = "Quote"
         | stringifyToken (Integer i) =
             "Integer(" ^ (IntInf.toString i) ^ ")"

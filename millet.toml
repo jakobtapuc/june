@@ -1,6 +1,6 @@
 version = 1
 [workspace]
-root = "src/june.mlb"
+root = "src/june-cek.mlb"
 
 [language]
 fixity-across-files = true

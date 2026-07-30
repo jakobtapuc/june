@@ -7,6 +7,8 @@ in
     "allowSuccessorML true"
   in
     top-level-ops.sml
+    result.sig
+    result.sml
     list-ext.sml
     token.sig
     token.sml

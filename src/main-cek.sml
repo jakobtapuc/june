@@ -13,21 +13,34 @@ val _ =
     fun runProgram env [] = (Value.VUnit, env)
       | runProgram env (expr :: rest) =
           let
-            val expanded = Expander.expand expr
-
-            val (_, env') = Machine.run
-              (Machine.Running
-                 { control = Machine.Expr expanded
-                 , env = env
-                 , kont = Machine.Done
-                 })
+            val initState = Machine.Running
+              { control = Machine.Expr {expr, isTail = false}
+              , env
+              , kont = Machine.Done
+              , trace = []
+              }
           in
-            runProgram env' rest
+            case Machine.run initState of
+            | Result.Ok (_, env') => runProgram env' rest
+            | Result.Err (error, trace) =>
+                let
+                  val () =
+                    print
+                    <| ErrorReporter.reportFromMachine fileName error trace
+                in
+                  runProgram env []
+                end
           end
 
   in
     case parsed of
     | NONE => raise Fail "Parse error"
-    | SOME (exprs, _) => let val (_, _) = runProgram Env.prim exprs in () end
+    | SOME (exprs, _) =>
+        let
+          val expanded = List.map Expander.expand exprs
+          val (_, _) = runProgram Env.prim expanded
+        in
+          ()
+        end
   end
   handle exn' => print (ErrorReporter.report fileName exn' ^ "\n")

@@ -7,7 +7,7 @@ MLB_CEK := src/june-cek.mlb
 
 .PHONY: all clean watch
 
-all: $(TARGET) $(TARGET_CEK)
+all: $(TARGET_CEK)
 
 $(TARGET): $(MLB)
 	mkdir -p $(dir $@)

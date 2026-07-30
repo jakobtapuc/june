@@ -80,8 +80,12 @@ struct
   fun lexChars pos [] = [{token = Eof, pos = pos}]
     | lexChars pos ((c as #"(") :: rest) =
         {token = LParen, pos = pos} :: lexChars (advance pos c) rest
+    | lexChars pos ((c as #"[") :: rest) =
+        {token = LBracket, pos = pos} :: lexChars (advance pos c) rest
     | lexChars pos ((c as #")") :: rest) =
         {token = RParen, pos = pos} :: lexChars (advance pos c) rest
+    | lexChars pos ((c as #"]") :: rest) =
+        {token = RBracket, pos = pos} :: lexChars (advance pos c) rest
     | lexChars pos ((c as #"'") :: rest) =
         {token = Quote, pos = pos} :: lexChars (advance pos c) rest
     | lexChars pos ((c as #";") :: rest) =
